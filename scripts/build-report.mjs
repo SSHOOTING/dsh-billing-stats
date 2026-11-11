@@ -162,7 +162,7 @@ function renderHtml(context) {
 
   const billDelta = context.billRecords.length === 0
     ? '未导入账单'
-    : `${formatMoney(context.billMicros, context.catalog.displayCurrency)}；与归因差 ${formatMoney(context.billMicros - context.totalBilledMicros, context.catalog.displayCurrency)}`
+    : `${formatMoney(context.billMicros, context.catalog.displayCurrency)}；与归因差 ${formatSignedMoney(context.billMicros - context.totalBilledMicros, context.catalog.displayCurrency)}`
   const profileCards = [...context.catalog.profiles.values()].map(profile => `<article class="card">
     <div class="card-kicker">${profile.billingBasis === 'subscription-allowance' ? '订阅/额度口径' : '按量计费'}</div>
     <h3>${escapeHtml(profile.label)}</h3>
@@ -291,6 +291,11 @@ function escapeHtml(value) {
     .replace(/>/gu, '&gt;')
     .replace(/"/gu, '&quot;')
     .replace(/'/gu, '&#39;')
+}
+
+function formatSignedMoney(micros, currency) {
+  const value = Number.isFinite(micros) ? micros : 0
+  return `${value < 0 ? '-' : ''}${formatMoney(Math.abs(value), currency)}`
 }
 
 function reportComponentKey(bucket) {
