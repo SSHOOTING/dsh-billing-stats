@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "version": "2026-11-11-builtin-v1",
+  "displayCurrency": "CNY",
+  "usdToCny": 7.2,
+  "defaultProfile": "deepseek-official",
+  "providerProfiles": {
+    "deepseek": "deepseek-official",
+    "deepseek-official": "deepseek-official",
+    "opencode-go": "opencode-go",
+    "opencode": "opencode-go",
+    "openrouter": "opencode-go",
+    "anthropic": "opencode-go"
+  },
+  "profiles": {
+    "deepseek-official": {
+      "label": "DeepSeek 官方 API",
+      "currency": "CNY",
+      "billingBasis": "payg",
+      "accountMultiplier": 1,
+      "searchMultiplier": 1,
+      "source": "DeepSeek official list price + peak metadata; search fee pending invoice verification",
+      "verified": true,
+      "models": {
+        "deepseek-flash": {
+          "aliases": [
+            "deepseek-v4-flash",
+            "deepseek-v4.1-flash",
+            "deepseek-v4-1-flash",
+            "deepseek-chat",
+            "deepseek-reasoner",
+            "deepseek/deepseek-v4-flash",
+            "deepseek/deepseek-v4.1-flash"
+          ],
+          "input": 1.0,
+          "cacheRead": 0.02,
+          "cacheWrite": 1.0,
+          "output": 4.0,
+          "peakMultiplier": 2,
+          "peakTimeZone": "Asia/Shanghai",
+          "peakWindows": [
+            ["09:00", "12:00"],
+            ["14:00", "18:00"]
+          ],
+          "verified": true
+        },
+        "deepseek-pro": {
+          "aliases": [
+            "deepseek-v4-pro",
+            "deepseek/deepseek-v4-pro"
+          ],
+          "input": 4.4,
+          "cacheRead": 0.15,
+          "cacheWrite": 4.4,
+          "output": 13.2,
+          "peakMultiplier": 2,
+          "peakTimeZone": "Asia/Shanghai",
+          "peakWindows": [
+            ["09:00", "12:00"],
+            ["14:00", "18:00"]
+          ],
+          "verified": false
+        }
+      },
+      "searchFees": {
+        "deepseek-tools-search": {
+          "perRequest": 0.005,
+          "currency": "CNY",
+          "verified": false,
+          "source": "Observed benchmark; confirm against DeepSeek invoice"
+        }
+      }
+    },
+    "opencode-go": {
+      "label": "OpenCode Go",
+      "currency": "USD",
+      "billingBasis": "subscription-allowance",
+      "accountMultiplier": 0.6,
+      "accountMultiplierSource": "本账户观测 allowance / list_cost ≈ 0.6；仅账户级经验值，不是供应商全局价格",
+      "searchMultiplier": 0.6,
+      "source": "OpenCode Activity list_cost calibration 2026-11-11",
+      "verified": true,
+      "models": {
+        "deepseek-flash": {
+          "aliases": [
+            "deepseek-v4-flash",
+            "deepseek-v4.1-flash",
+            "deepseek-v4-1-flash",
+            "deepseek-chat",
+            "deepseek-reasoner",
+            "openrouter/deepseek/deepseek-v4-flash",
+            "openrouter/deepseek/deepseek-v4.1-flash"
+          ],
+          "input": 0.15,
+          "cacheRead": 0.003,
+          "cacheWrite": 0.15,
+          "output": 0.6,
+          "peakMultiplier": 2,
+          "peakTimeZone": "Asia/Shanghai",
+          "peakWindows": [
+            ["09:00", "12:00"],
+            ["14:00", "18:00"]
+          ],
+          "verified": true
+        },
+        "claude-haiku-5-5": {
+          "aliases": [
+            "claude-haiku-5-5",
+            "claude-haiku-5.5",
+            "anthropic/claude-haiku-5.5",
+            "openrouter/anthropic/claude-haiku-5.5"
+          ],
+          "input": 0.1,
+          "cacheRead": 0.01,
+          "cacheWrite": 0.125,
+          "output": 0.5,
+          "verified": true
+        }
+      },
+      "searchFees": {
+        "deepseek-tools-search": {
+          "perRequest": 0.005,
+          "currency": "CNY",
+          "verified": false,
+          "source": "DeepSeek 回落的搜索固定费；需账单复核"
+        }
+      }
+    }
+  }
+}

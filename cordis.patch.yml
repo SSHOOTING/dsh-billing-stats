@@ -1,0 +1,13 @@
+# Bundle patch for dsh-billing-attribution.
+- insert:
+    - id: billing-attribution
+      name: dsh-billing-attribution
+      config:
+        displayCurrency: CNY
+        pricingPath: 'E:/programs/dsh-billing-attribution/pricing/profiles.json'
+        ledgerPath: 'E:/programs/dsh-billing-attribution/data/usage-ledger.jsonl'
+        searchLedgerEnabled: true
+        searchLedgerPath: 'E:/programs/deepseed_harness/opencode-search-shim/search-ledger.jsonl'
+        searchStatePath: 'E:/programs/dsh-billing-attribution/data/search-state.json'
+        activeProfile: auto
+        maxRecentRequests: 20

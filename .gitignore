@@ -1,0 +1,9 @@
+node_modules/
+data/*.jsonl
+data/*.json
+data/*.csv
+/reports/
+pricing/fitted/*.json
+/experiments/
+*.log
+.DS_Store
