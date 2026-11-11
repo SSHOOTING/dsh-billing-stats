@@ -1,4 +1,4 @@
-# Portable bundle patch for dsh-billing-attribution.
+# Portable bundle patch for dsh-billing-stats.
 #
 # The plugin resolves its bundled pricing catalog from its own package directory.
 # The usage ledger and search state default to files inside the installed package;
@@ -7,7 +7,8 @@
 # specific to each search shim deployment.
 - insert:
     - id: billing-attribution
-      name: dsh-billing-attribution
+      # Stable internal id kept for existing profile config compatibility.
+      name: dsh-billing-stats
       config:
         displayCurrency: CNY
         searchLedgerEnabled: false

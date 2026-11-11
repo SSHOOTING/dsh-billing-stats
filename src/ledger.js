@@ -232,7 +232,7 @@ export function billingView(state, env, searchNow = null, searchLast = null, sea
 
 export function renderBillingSummary(view, catalog) {
   const lines = [
-    `计费归因 · ${view.phase === 'active' ? '本轮进行中' : view.phase === 'ended' ? '上一轮已结束' : '等待请求'}`,
+    `计费统计 · ${view.phase === 'active' ? '本轮进行中' : view.phase === 'ended' ? '上一轮已结束' : '等待请求'}`,
     `${view.turnPhase === 'ended' ? '上一轮' : '本轮'}：账单口径 ${formatMoney(view.turnBilledMicros, view.currency)}；公开价 ${formatMoney(view.turnListMicros, view.currency)}；请求 ${view.turnRequestCount} 次`,
     `会话累计：账单口径 ${formatMoney(view.billedSpentMicros, view.currency)}；公开价 ${formatMoney(view.listSpentMicros, view.currency)}`,
   ]

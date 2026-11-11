@@ -1,12 +1,12 @@
 # Changelog
 
-本项目从 `v0.1.0` 开始记录用户可见变更、验证结果和已知边界。
+本项目从 `dsh-billing-stats v0.1.0` 开始记录用户可见变更、验证结果和已知边界。
 
 ## [0.1.0] - 2026-11-11
 
 ### 已实现能力
 
-- 只读计费归因：从 DSH 请求事件读取 provider、model 和 usage，不修改思考档位、
+- 只读计费统计：从 DSH 请求事件读取 provider、model 和 usage，不修改思考档位、
   `maxTokens`、请求内容或工具调用。
 - 逐请求与逐轮金额：拆分未缓存输入、缓存读取、缓存写入、输出（含 reasoning）、
   搜索固定费和未知项。
@@ -50,6 +50,7 @@
 
 ### 发布说明
 
-- 版本号 `0.1.0` 已写入 `package.json`，但**尚未发布**。
-- 仓库当前没有 LICENSE、远端 URL、npm 登录记录或 DSH 市场目录条目；这些是发布前
-  必须由用户确认的外部信息。
+- 包名统一为 `dsh-billing-stats`，版本号 `0.1.0` 已写入 `package.json`，但**尚未发布**。
+- 许可证已选择 MIT；GitHub 仓库目标为
+  `https://github.com/SSHOOTING/dsh-billing-stats`。上传、npm publish 和 DSH 市场目录
+  提交仍需要对应的登录授权与最终执行确认。

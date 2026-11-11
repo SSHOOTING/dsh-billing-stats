@@ -7,23 +7,23 @@
 
 | 项目 | 当前值 | 状态 |
 |---|---|---|
-| 包名 | `dsh-billing-attribution` | 未确认在 npm 是否可用 |
+| 包名 | `dsh-billing-stats` | 用户已选定；npm registry 查询为 404（当前可用） |
 | 版本 | `0.1.0` | 已写入 `package.json` |
 | Git 基线 | `99ac038ba6a27a5c2c935a15f8123d9c8c53fdef` | 已确认 |
 | DSH 目标 | `>=0.2.0-rc.2 <0.2.1` | 已写入 `engines.dsh`；本机实测 `0.2.0-rc.2` |
 | Node 目标 | `^22.19.0 || >=24.0.0` | 已写入 `engines.node` |
-| 许可证 | 仓库中没有 LICENSE | **阻塞公开发布，待用户选择** |
-| 远端仓库 | 没有配置 git remote | **阻塞 GitHub Release** |
-| npm 可发布性 | `private: true`，无登录/scope 记录 | **阻塞 npm 发布** |
-| DSH 市场 | 未提交 catalog listing | **阻塞市场上架** |
+| 许可证 | MIT | 已写入 `LICENSE` 和 `package.json` |
+| 远端仓库 | 目标 `SSHOOTING/dsh-billing-stats` | 尚未配置 remote/push |
+| npm 可发布性 | 已移除 `private`，已设置 public `publishConfig` | 需要 npm 登录/2FA |
+| DSH 市场 | 用户选择提交 | 需要 GitHub 登录、仓库公开和目录 PR |
 
 ### 渠道建议（供选择，不代表已选定）
 
 | 渠道 | 适合用途 | 当前缺口 | 建议 |
 |---|---|---|---|
-| npm 包 | DSH 的常规安装、升级、版本发现；也是市场更新最顺的路径 | 许可证、公开仓库元数据、npm 名称/scope、登录、`private` 与 `publishConfig` | **优先评估**；确认包名后发布 `0.1.0` |
-| GitHub Release | 公开源码、变更记录、附 tarball 和校验和；不依赖 npm 账号 | 需先创建公开仓库并配置 remote；仍需许可证 | 与 npm 同版本发布，附 `dsh-billing-attribution-0.1.0.tgz` |
-| DSH 插件市场/目录 | 让用户可搜索、安装和升级 | 需要公开可安装来源，通常是 npm 包或 GitHub Release；还要向 awesome-dsh-plugin 提交目录 PR 并等待审核 | 前两条完成后提交，不作为首发主渠道 |
+| npm 包 | DSH 的常规安装、升级、版本发现；也是市场更新最顺的路径 | 需要 npm 登录、2FA 和包名复核 | **用户已选择**；发布 `dsh-billing-stats@0.1.0` |
+| GitHub Release | 公开源码、变更记录、附 tarball 和校验和；不依赖 npm 账号 | 需要 GitHub 登录并创建 `SSHOOTING/dsh-billing-stats` | 与 npm 同版本发布，附 tarball |
+| DSH 插件市场/目录 | 让用户可搜索、安装和升级 | 需要公开可安装来源；还要向 awesome-dsh-plugin 提交目录 PR 并等待审核 | 用户已选择；来源就绪后提交 |
 
 ## 2. 依赖与构建
 
@@ -37,6 +37,7 @@
 - [x] `engines.node`、`engines.dsh`、`peerDependencies` 与本机 DSH 版本相符
 - [x] 无编译/打包脚本；发布包直接包含 ESM 源码与客户端 bundle
 - [x] `npm pack --dry-run` 可用
+- [x] 2026-11-11 查询 npm registry：`dsh-billing-stats` 返回 404，当前未被占用
 - [ ] 发布前确认所有 peer dependency 版本范围仍与目标 DSH 一致
 
 ### 已修正的打包问题
@@ -51,19 +52,21 @@
 
 - [x] `npm test`：21 / 21 通过，0 失败。
 - [x] `npm run check`：17 个文件全部通过。
-- [x] `npm pack --dry-run`：成功；修正后为 19 个条目，最终候选压缩大小 `47,503` bytes，
-  unpacked `175,347` bytes。此前误打包的 `pricing/fitted/deepseek-official.json`
-  已不再出现。
-- [x] 已生成真实本地候选 tarball：
-  `.release-artifacts/dsh-billing-attribution-0.1.0.tgz`。
-- [x] 已解压候选 tarball 并执行 Node ESM 导入冒烟：导出
-  `name=billing-attribution`、`inject=["commands","sessionProjections"]`、
+- [x] 改名后的 `npm test` 与 `npm run check` 通过。
+- [x] 改名后 `npm pack --dry-run`：20 个条目，压缩大小 `48,740` bytes。
+- [x] 改名后候选 tarball：`.release-artifacts/dsh-billing-stats-0.1.0.tgz`，
+  unpacked 大小 `176,780` bytes。
+- [x] 解压候选 tarball 并执行 Node ESM 导入冒烟：导出
+  `name=billing-stats`、`inject=["commands","sessionProjections"]`、
   `typeof apply=function`。
-- [x] 已记录候选 tarball SHA-256：
-  `525E3546BD190A10389F65E59244003E1E03F0758010F779F7426FB7843DBC08`。
-- [x] 已生成候选校验和文件 `.release-artifacts/SHA256SUMS`。
-- [x] 已确认 tarball 不含 `data/*`、`reports/`、`experiments/`、`pricing/fitted/`。
-- [x] 已确认 README、CHANGELOG、发布说明、安装文档和两份计费 docs 均在 tarball 中。
+- [x] 候选 tarball SHA-256：
+  `F649E181E4FC60EC30500042DC03406DE7E3C7D349DC6F5EF7F6102D00DA17F9`。
+- [x] 已确认改名后的 tarball 不含 `data/*`、`reports/`、`experiments/`、
+  `pricing/fitted/`。
+- [x] `npm publish --dry-run --access public` 成功；命令仅提示当前未登录 npm，
+  未上传任何内容。
+- [x] 已确认 README、CHANGELOG、LICENSE、发布说明、安装文档和两份计费 docs
+  均在 tarball 中。
 
 ## 4. 安装与 DSH 重启验证
 
@@ -74,7 +77,7 @@
 - [x] 在隔离临时 `DSH_HOME` 中验证 `dsh plugin --profile web --help` 路径：DSH 成功
   初始化临时 web profile，并将命令转发给 pnpm `11.25.0`，退出码为 0；未安装插件。
 - [ ] 在用户确认后，用**独立临时 profile**安装最终 tarball 或 npm 包。
-- [ ] 重启 DSH web 进程，确认日志出现 `[billing-attribution] active`。
+- [ ] 重启 DSH web 进程，确认日志出现 `[billing-stats] active`。
 - [ ] 执行 `/cost`、`/cost explain`、`/cost profiles`。
 - [ ] 发一轮受控请求，确认底部会话金额、每轮金额和展开明细。
 - [ ] 如启用搜索，确认真实账本记录归因到正确轮次。
@@ -84,7 +87,7 @@
 
 - [ ] 安装前备份 profile 的 `package.json`、`pnpm-lock.yaml` 和 `cordis.patch.yml`。
 - [ ] 回滚步骤已写入 `install/README.md`：
-  - 移除 `dsh-billing-attribution` 依赖与 bundle 项；
+  - 移除 `dsh-billing-stats` 依赖与 bundle 项；
   - 恢复 profile patch；
   - 同步依赖；
   - 重启 DSH；
@@ -93,11 +96,11 @@
 
 ## 6. 发布产物
 
-- [ ] 最终 `package.json` 元数据已完成（license、repository、homepage、bugs）。
-- [ ] 如走 npm：确认 scope/包名可用，移除 `private: true`，补充合适的 `publishConfig`。
-- [ ] 补齐许可证和仓库元数据后重新生成最终 tarball
-  `dsh-billing-attribution-0.1.0.tgz`，并重新计算哈希。
-- [ ] SHA-256 校验和文件。
+- [x] 最终 `package.json` 元数据已补：MIT、repository、homepage、bugs。
+- [x] npm 包名 `dsh-billing-stats` 当前可用；`private` 已移除，已设置 public
+  `publishConfig`。
+- [x] 已重新生成候选 tarball `dsh-billing-stats-0.1.0.tgz` 并计算哈希。
+- [x] SHA-256 校验和文件：`.release-artifacts/SHA256SUMS`。
 - [ ] GitHub Release 说明采用 `RELEASE-NOTES-v0.1.0.md` 的最终版本。
 - [ ] 发布说明明确标注“归因结果不是发票”。
 
@@ -109,6 +112,9 @@
 - [ ] 升级路径可用：安装下一版本时不会覆盖用户 ledger 数据。
 - [ ] 记录发布 URL、发布时间、tarball 哈希和验证人。
 - [ ] 如提交 DSH 市场：确认 catalog 条目、安装源、版本和兼容范围一致。
+- [x] 已准备 awesome-dsh-plugin 目录条目：
+  `market/awesome-dsh-plugin.yml`。
+- [ ] GitHub 仓库至少满 1 天、带 `dsh-plugin` topic 后，提交目录 PR。
 
 ## 8. 外部动作闸门
 

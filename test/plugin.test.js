@@ -56,7 +56,7 @@ test('client bundle registers composer and per-turn money views', () => {
     },
   }
   vm.runInNewContext(readFileSync(new URL('../src/client.js', import.meta.url), 'utf8'), sandbox)
-  assert.equal(loaded.id, 'dsh-billing-attribution')
+  assert.equal(loaded.id, 'dsh-billing-stats')
   const client = loaded.factory(() => ({ createElement() { return {} } }))
   const registrations = []
   const injectedSlots = []
@@ -77,7 +77,7 @@ test('client bundle registers composer and per-turn money views', () => {
     'conversation.chat.assistant-actions',
   ])
   assert.equal(registrations.length, 2)
-  assert.equal(registrations[0].options.id, 'billing-attribution')
+  assert.equal(registrations[0].options.id, 'billing-stats')
   assert.equal(typeof registrations[0].component, 'function')
   assert.equal(registrations[1].options.id, 'billing-turn-amount')
   assert.equal(typeof registrations[1].component, 'function')

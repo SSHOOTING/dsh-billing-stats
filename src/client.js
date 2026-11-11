@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-  id: 'dsh-billing-attribution',
+  id: 'dsh-billing-stats',
   factory: (require) => {
     var module = { exports: {} }
     var exports = module.exports
@@ -7,7 +7,7 @@ window.__ModuleLoader__.load({
     const React = require('react')
     const ReactDOM = require('react-dom')
     const h = React.createElement
-    const name = 'billing-attribution-client'
+    const name = 'billing-stats-client'
     const inject = ['slots']
 
     function ensureStyles() {
@@ -283,9 +283,9 @@ window.__ModuleLoader__.load({
       ensureStyles()
       ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register({
         name: 'conversation.composer.dock',
-        id: 'billing-attribution',
+        id: 'billing-stats',
         order: 10,
-        label: '计费归因',
+        label: '计费统计',
       }, BillingComposerPill))
       ctx.slots.inject('conversation.chat.assistant-actions', () => ctx.slots.register({
         name: 'conversation.chat.assistant-actions',

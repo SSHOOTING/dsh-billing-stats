@@ -1,9 +1,21 @@
 {
-  "name": "dsh-billing-attribution",
+  "name": "dsh-billing-stats",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
-  "description": "LLM-free DSH billing attribution, bill import, calibration, and explainable cost reporting.",
+  "description": "Read-only DSH token billing statistics with equivalent API cost, bill calibration, and explainable per-request reporting.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SSHOOTING/dsh-billing-stats.git"
+  },
+  "homepage": "https://github.com/SSHOOTING/dsh-billing-stats#readme",
+  "bugs": {
+    "url": "https://github.com/SSHOOTING/dsh-billing-stats/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "main": "src/index.js",
   "keywords": [
     "deepseek",
@@ -11,7 +23,10 @@
     "dsh",
     "dsh-plugin",
     "billing",
+    "billing-stats",
     "cost",
+    "subscription",
+    "api-cost",
     "token-usage",
     "observability"
   ],
@@ -29,6 +44,7 @@
     "docs/BILLING-MODEL.md",
     "docs/billing-explainer.html",
     "cordis.patch.yml",
+    "LICENSE",
     "README.md",
     "CHANGELOG.md",
     "RELEASE-NOTES-v0.1.0.md"

@@ -1,11 +1,11 @@
-# DSH Billing Attribution v0.1.0
+# DSH Billing Stats v0.1.0
 
-`dsh-billing-attribution` 是 DSH 的只读计费观测插件：把已经产生的 usage、搜索账本和
-用户导入的供应商账单，转换为可解释的费用归因。它不调用 LLM、不联网请求模型、不修改
+`dsh-billing-stats` 是 DSH 的只读计费统计插件：把已经产生的 usage、搜索账本和
+用户导入的供应商账单，转换为可解释的费用统计。它不调用 LLM、不联网请求模型、不修改
 请求、思考档位或 `maxTokens`，也不阻断工具调用。
 
-> 本文件是发布说明草稿。仓库 URL、npm 包名/scope、许可证和最终发布渠道仍需用户确认；
-> 在完成确认前，不应把其中的安装命令当成已经可用。
+> 本文件是发布说明草稿。当前已确认 npm 渠道、包名 `dsh-billing-stats`、MIT 许可证和
+> GitHub 仓库目标 `SSHOOTING/dsh-billing-stats`；发布账号与最终发布动作仍需确认。
 
 ## 亮点
 
@@ -28,7 +28,7 @@
 
 ```powershell
 # npm 渠道确认并发布后
-dsh plugin --profile web add dsh-billing-attribution@0.1.0
+dsh plugin --profile web add dsh-billing-stats@0.1.0
 
 # 或 GitHub Release 提供的同版本 tarball
 dsh plugin --profile web add <release-tarball-url-or-local-path>
@@ -63,10 +63,12 @@ dsh plugin --profile web add <release-tarball-url-or-local-path>
 - 搜索关联在缺少精确 request id 时是 best-effort。
 - 发布包若使用默认包内 ledger 路径，升级时可能丢失数据；长期使用应覆盖到用户目录。
 
-## 发布前必须补齐
+## 发布前状态
 
-- 许可证类型和 `LICENSE` 文件；
-- 公开仓库 URL、`repository` / `homepage` / `bugs` 元数据；
-- npm 包名/scope 可用性、登录和 2FA；
-- GitHub Release 或 npm 的最终发布确认；
-- DSH 市场目录 listing 的 PR 与审核。
+- [x] 许可证：MIT，`LICENSE` 已加入；
+- [x] GitHub 仓库目标：`SSHOOTING/dsh-billing-stats`，元数据已写入 `package.json`；
+- [x] npm 渠道与包名：`dsh-billing-stats`；
+- [ ] GitHub 登录、创建远端仓库与 push；
+- [ ] npm 登录与 2FA；
+- [ ] GitHub Release 或 npm 的最终发布动作；
+- [ ] DSH 市场目录 listing 的 PR 与审核。

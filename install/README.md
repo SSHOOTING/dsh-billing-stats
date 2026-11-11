@@ -15,7 +15,7 @@
 ## 方式一：npm 包（仅发布后）
 
 ```powershell
-dsh plugin --profile web add dsh-billing-attribution@0.1.0
+dsh plugin --profile web add dsh-billing-stats@0.1.0
 ```
 
 该命令要求 npm 包已发布、profile 的包管理器可以解析该名称，并且 DSH 进程使用同一个
@@ -24,7 +24,7 @@ dsh plugin --profile web add dsh-billing-attribution@0.1.0
 ## 方式二：tarball（GitHub Release 或本地产物）
 
 ```powershell
-dsh plugin --profile web add E:\path\to\dsh-billing-attribution-0.1.0.tgz
+dsh plugin --profile web add E:\path\to\dsh-billing-stats-0.1.0.tgz
 ```
 
 DSH 的 `plugin` 子命令会把 `add ...` 转发给 profile 目录中的 pnpm。发布包不包含
@@ -41,12 +41,12 @@ dsh plugin --profile web add link:E:/programs/dsh-billing-attribution
 ```json
 {
   "dependencies": {
-    "dsh-billing-attribution": "link:E:/programs/dsh-billing-attribution"
+    "dsh-billing-stats": "link:E:/programs/dsh-billing-attribution"
   },
   "dsh": {
     "profile": {
       "bundles": [
-        "dsh-billing-attribution"
+        "dsh-billing-stats"
       ]
     }
   }
@@ -73,14 +73,14 @@ dsh plugin --profile web add link:E:/programs/dsh-billing-attribution
 ## 重启与验收
 
 1. 关闭正在运行的 DSH web 进程。
-2. 用启动脚本正常启动，确认日志出现 `[billing-attribution] active`。
+2. 用启动脚本正常启动，确认日志出现 `[billing-stats] active`。
 3. 打开 web 会话，执行 `/cost`、`/cost explain`、`/cost profiles`。
 4. 发一轮受控请求，确认底部会话金额、每轮金额和展开明细出现。
 5. 如启用搜索账本，再验证一条真实搜索记录被归因到正确轮次。
 
 ## 回滚
 
-1. 从 profile 的 `package.json` 移除 `dsh-billing-attribution` 依赖和 bundle 项。
+1. 从 profile 的 `package.json` 移除 `dsh-billing-stats` 依赖和 bundle 项。
 2. 移除或恢复 profile `cordis.patch.yml` 中的 `billing-attribution` 配置。
 3. 在 profile 目录执行包管理器安装/同步，或用安装前备份恢复 `package.json`、
    `pnpm-lock.yaml` 与 patch 文件。

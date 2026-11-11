@@ -1,5 +1,5 @@
 /**
- * Billing attribution host half.
+ * Billing statistics host half.
  *
  * This plugin is deliberately observational:
  * - it never rewrites the model request;
@@ -45,7 +45,7 @@ import {
   turnSearchSummary,
 } from './host-search-ledger.js'
 
-export const name = 'billing-attribution'
+export const name = 'billing-stats'
 export const inject = ['commands', 'sessionProjections']
 
 const DEFAULT_PRICING_PATH = fileURLToPath(new URL('../pricing/profiles.json', import.meta.url))
@@ -56,7 +56,7 @@ const DEFAULT_SEARCH_LEDGER_PATH = 'E:\\programs\\deepseed_harness\\opencode-sea
 export function resolveConfig(config = {}) {
   const displayCurrency = String(config.displayCurrency ?? 'CNY').toUpperCase()
   if (displayCurrency !== 'CNY' && displayCurrency !== 'USD') {
-    throw new Error('billing-attribution: displayCurrency must be CNY or USD')
+    throw new Error('dsh-billing-stats: displayCurrency must be CNY or USD')
   }
   return {
     displayCurrency,
@@ -75,12 +75,12 @@ export function apply(ctx, config = {}) {
   const pricing = loadPricingCatalog(resolved.pricingPath)
   if (pricing.displayCurrency !== resolved.displayCurrency) {
     throw new Error(
-      `billing-attribution: config displayCurrency ${resolved.displayCurrency} `
+      `dsh-billing-stats: config displayCurrency ${resolved.displayCurrency} `
       + `does not match pricing catalog ${pricing.displayCurrency}`,
     )
   }
   if (resolved.activeProfile !== 'auto' && !pricing.profiles.has(resolved.activeProfile)) {
-    throw new Error(`billing-attribution: unknown activeProfile ${resolved.activeProfile}`)
+    throw new Error(`dsh-billing-stats: unknown activeProfile ${resolved.activeProfile}`)
   }
   const env = { ...resolved, pricing }
   const searchStates = new Map(Object.entries(loadJsonObject(resolved.searchStatePath)))
@@ -186,7 +186,7 @@ export function apply(ctx, config = {}) {
 
   ctx.commands.register({
     name: 'cost',
-    description: '查看计费归因、价格档案和最近一次请求拆分',
+    description: '查看计费统计、价格档案和最近一次请求拆分',
     input: { hint: '[explain|profiles|profile auto|<id>]' },
     handler: (invocation) => {
       const parsed = parseCostCommand(invocation.rawInput, pricing)
@@ -373,7 +373,7 @@ function nonEmptyString(value) {
 
 function safeIntegerAtLeast(value, minimum, field) {
   if (!Number.isSafeInteger(value) || value < minimum) {
-    throw new Error(`billing-attribution: ${field} must be a safe integer >= ${minimum}`)
+    throw new Error(`dsh-billing-stats: ${field} must be a safe integer >= ${minimum}`)
   }
   return value
 }
