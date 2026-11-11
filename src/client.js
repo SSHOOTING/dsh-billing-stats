@@ -53,13 +53,20 @@ window.__ModuleLoader__.load({
         'aria-hidden': true,
         fill: 'none',
         stroke: 'currentColor',
-        strokeWidth: 1.25,
+        strokeWidth: 1.3,
         strokeLinecap: 'round',
         strokeLinejoin: 'round',
       },
-      h('rect', { x: 1.75, y: 3.5, width: 12.5, height: 9, rx: 2 }),
-      h('circle', { cx: 8, cy: 8, r: 2.1 }),
-      h('path', { d: 'M4.1 5.7h.01M11.9 10.3h.01' }),
+      h('circle', { cx: 8, cy: 8, r: 6.1 }),
+      h('text', {
+        x: 8,
+        y: 11,
+        textAnchor: 'middle',
+        fontSize: 8,
+        fontWeight: 600,
+        fill: 'currentColor',
+        stroke: 'none',
+      }, '¥'),
       )
     }
 
@@ -75,7 +82,53 @@ window.__ModuleLoader__.load({
       return cost?.mainComponentTotals?.[key]?.billedMicros ?? 0
     }
 
-    function CostPanel({ cost, anchorRef, onClose }) {
+    function addComponents(target, source) {
+      for (const [key, value] of Object.entries(source ?? {})) {
+        const current = target[key] ?? { listMicros: 0, billedMicros: 0 }
+        target[key] = {
+          listMicros: current.listMicros + (value.listMicros ?? 0),
+          billedMicros: current.billedMicros + (value.billedMicros ?? 0),
+        }
+      }
+    }
+
+    function sessionCost(projection) {
+      const buckets = {
+        uncachedInputTokens: 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        outputTokens: 0,
+      }
+      const mainComponentTotals = {}
+      const searchComponentTotals = {}
+      let searchBilledMicros = 0
+      let searchRequestCount = 0
+      let requestCount = 0
+      for (const cost of Object.values(projection.turnCosts ?? {})) {
+        for (const key of Object.keys(buckets)) {
+          buckets[key] += cost.buckets?.[key] ?? 0
+        }
+        addComponents(mainComponentTotals, cost.mainComponentTotals)
+        addComponents(searchComponentTotals, cost.searchComponentTotals)
+        searchBilledMicros += cost.searchBilledMicros ?? 0
+        searchRequestCount += cost.searchRequestCount ?? 0
+        requestCount += cost.requestCount ?? 0
+      }
+      return {
+        billedMicros: projection.billedSpentMicros,
+        listMicros: projection.listSpentMicros,
+        buckets,
+        mainComponentTotals,
+        searchComponentTotals,
+        componentTotals: projection.componentTotals,
+        searchBilledMicros,
+        searchRequestCount,
+        requestCount,
+        unknown: projection.unknown,
+      }
+    }
+
+    function CostPanel({ cost, anchorRef, onClose, title }) {
       const panelRef = React.useRef(null)
       const [position, setPosition] = React.useState(null)
       React.useEffect(() => {
@@ -112,7 +165,6 @@ window.__ModuleLoader__.load({
         cost.searchRequestCount > 0 ? ` · ${cost.searchRequestCount} 次` : ''
       }`
       const rows = [
-        ['提供方 / 模型', cost.routes?.length > 0 ? cost.routes.join(', ') : '未知'],
         ...(cacheHit === null ? [] : [['缓存命中', cacheHit]]),
         ['未缓存输入', formatMoney(componentAmount(cost, 'uncachedInput'))],
         ['缓存读取', formatMoney(componentAmount(cost, 'cacheRead'))],
@@ -126,12 +178,12 @@ window.__ModuleLoader__.load({
         h('div', {
           ref: panelRef,
           role: 'dialog',
-          'aria-label': '本轮费用',
+          'aria-label': title,
           'data-billing-cost-panel': true,
           style: position,
         },
         h('div', { className: 'billing-head' },
-          h('span', { className: 'billing-head-label' }, h(MoneyIcon), '本轮费用'),
+          h('span', { className: 'billing-head-label' }, h(MoneyIcon), title),
           h('span', { className: 'billing-head-value' }, formatMoney(cost.billedMicros)),
         ),
         h('div', { className: 'billing-rule', 'aria-hidden': true }),
@@ -160,23 +212,29 @@ window.__ModuleLoader__.load({
       const projection = props.useProjection('billing')
       const dialog = useCostDialog()
       if (projection === undefined) return null
-      const turn = projection.currentTurn
-      const cost = turn === null ? undefined : projection.turnCosts?.[String(turn)]
-      if (cost === undefined || (cost.requestCount === 0 && cost.billedMicros === 0)) return null
+      const hasData = Object.keys(projection.turnCosts ?? {}).length > 0
+        || projection.turnPhase === 'active'
+      if (!hasData) return null
+      const cost = sessionCost(projection)
       return h('span', { ref: dialog.rootRef, 'data-billing-composer-pill-root': true },
         h('button', {
           type: 'button',
           'data-billing-composer-pill': true,
           'aria-haspopup': 'dialog',
           'aria-expanded': dialog.open,
-          'aria-label': `本轮费用 ${formatMoney(cost.billedMicros)}`,
+          'aria-label': `会话费用 ${formatMoney(cost.billedMicros)}`,
           onClick: () => dialog.setOpen(!dialog.open),
         },
         h(MoneyIcon),
-        h('span', { className: 'billing-label' }, `本轮 ${formatMoney(cost.billedMicros)}`),
+        h('span', { className: 'billing-label' }, `会话 ${formatMoney(cost.billedMicros)}`),
         ),
         dialog.open
-          ? h(CostPanel, { cost, anchorRef: dialog.rootRef, onClose: dialog.close })
+          ? h(CostPanel, {
+              cost,
+              anchorRef: dialog.rootRef,
+              onClose: dialog.close,
+              title: '会话费用',
+            })
           : null,
       )
     }
@@ -211,7 +269,12 @@ window.__ModuleLoader__.load({
         h('span', { className: 'billing-label' }, `用量 ${formatMoney(cost.billedMicros)}`),
         ),
         dialog.open
-          ? h(CostPanel, { cost, anchorRef: dialog.rootRef, onClose: dialog.close })
+          ? h(CostPanel, {
+              cost,
+              anchorRef: dialog.rootRef,
+              onClose: dialog.close,
+              title: '本轮费用',
+            })
           : null,
       )
     }
