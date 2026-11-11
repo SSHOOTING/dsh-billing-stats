@@ -13,7 +13,7 @@
 | DSH 目标 | `>=0.2.0-rc.2 <0.2.1` | 已写入 `engines.dsh`；本机实测 `0.2.0-rc.2` |
 | Node 目标 | `^22.19.0 || >=24.0.0` | 已写入 `engines.node` |
 | 许可证 | MIT | 已写入 `LICENSE` 和 `package.json` |
-| 远端仓库 | 目标 `SSHOOTING/dsh-billing-stats` | 尚未配置 remote/push |
+| 远端仓库 | `SSHOOTING/dsh-billing-stats` | 已创建为公开仓库，main 已推送 |
 | npm 可发布性 | 已移除 `private`，已设置 public `publishConfig` | 需要 npm 登录/2FA |
 | DSH 市场 | 用户选择提交 | 需要 GitHub 登录、仓库公开和目录 PR |
 
@@ -76,6 +76,9 @@
 - [x] 已确认给 DSH 注入正确 `DSH_HOME` 的启动脚本存在；命令行默认目录与阅读文档必须区分。
 - [x] 在隔离临时 `DSH_HOME` 中验证 `dsh plugin --profile web --help` 路径：DSH 成功
   初始化临时 web profile，并将命令转发给 pnpm `11.25.0`，退出码为 0；未安装插件。
+- [x] GitHub 公开仓库已创建并配置 remote：`origin` 指向
+  `https://github.com/SSHOOTING/dsh-billing-stats.git`。
+- [x] GitHub topic 已设置：`dsh-plugin`、`deepseek-harness`、`billing`。
 - [ ] 在用户确认后，用**独立临时 profile**安装最终 tarball 或 npm 包。
 - [ ] 重启 DSH web 进程，确认日志出现 `[billing-stats] active`。
 - [ ] 执行 `/cost`、`/cost explain`、`/cost profiles`。
@@ -107,6 +110,7 @@
 ## 7. 发布后检查
 
 - [ ] npm 包页面和 GitHub Release 的版本号、README、许可证一致。
+- [ ] npm 当前未登录；执行 `npm login` 后才能发布。
 - [ ] 从公开来源安装一次，不依赖本机开发链接。
 - [ ] DSH 安装后重启成功，客户端 UI 与 `/cost` 命令可用。
 - [ ] 升级路径可用：安装下一版本时不会覆盖用户 ledger 数据。
@@ -114,15 +118,14 @@
 - [ ] 如提交 DSH 市场：确认 catalog 条目、安装源、版本和兼容范围一致。
 - [x] 已准备 awesome-dsh-plugin 目录条目：
   `market/awesome-dsh-plugin.yml`。
-- [ ] GitHub 仓库至少满 1 天、带 `dsh-plugin` topic 后，提交目录 PR。
+- [ ] GitHub 仓库创建于 `2026-11-11T13:49:11Z`，至少满 1 天后才能提交目录 PR。
 
 ## 8. 外部动作闸门
 
-以下动作尚未执行，必须等待用户明确确认：
+以下动作尚未执行，必须等待用户明确确认或完成登录：
 
 - `npm publish`
-- `git push`
-- 创建远端仓库
+- `npm login` / npm 2FA
 - 创建 release tag
 - 上传 GitHub Release
 - 提交 DSH 市场/目录
