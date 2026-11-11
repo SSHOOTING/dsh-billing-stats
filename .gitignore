@@ -5,5 +5,7 @@ data/*.csv
 /reports/
 pricing/fitted/*.json
 /experiments/
+/.release-artifacts/
+.npm-cache/
 *.log
 .DS_Store

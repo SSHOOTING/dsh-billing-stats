@@ -47,15 +47,30 @@ pricing/profiles.json          当前价格档案
 pricing/fitted/*.json          账单拟合输出，不自动覆盖主配置
 ```
 
-## DSH 加载方式
+## 安装与 DSH 加载方式
 
-已在 DSH `0.2.0-rc.2` 的 web profile 中验证。profile 目录为：
+当前兼容范围是 DSH `0.2.0-rc.2`（`>=0.2.0-rc.2 <0.2.1`）。开发链接方式已在
+Windows 的 web profile 中实测；发布包安装路径需在选定发布渠道后再做一次干净 profile
+验收。DSH 支持 `dsh plugin --profile <profile> ...` 转发到 pnpm，实际 profile
+目录由运行时的 `$DSH_HOME/profiles/<profile>` 决定，不应写死为某台机器的路径。
 
-```text
-E:\program\DeepSeek\.dsh\profiles\web
+### A. 发布包安装
+
+发布后可按实际渠道任选一种：
+
+```powershell
+# npm 包（仅在 npm 渠道确认并发布后可用）
+dsh plugin --profile web add dsh-billing-attribution@0.1.0
+
+# 本地或 GitHub Release 提供的 tarball
+dsh plugin --profile web add E:\path\to\dsh-billing-attribution-0.1.0.tgz
 ```
 
-### 1. 链接插件
+安装后确认 profile 的 `package.json` 已在 `dsh.profile.bundles` 中加入
+`dsh-billing-attribution`，再重启 DSH 的对应进程。发布包自带的
+`cordis.patch.yml` 使用可移植默认值，并默认关闭搜索账本关联。
+
+### B. 本地开发链接（当前已验证）
 
 在 web profile 中把本仓库作为 link 依赖，并加入 profile bundle：
 
@@ -80,26 +95,26 @@ dsh plugin --profile web add link:E:/programs/dsh-billing-attribution
 }
 ```
 
-### 2. 配置 profile patch
+### C. 配置 profile patch
 
-在 `cordis.patch.yml` 中按插件 id 覆盖实际路径：
+发布包默认从包内读取价格表，ledger 和搜索状态默认写入包目录。需要长期保留数据时，
+应在 profile 的 `cordis.patch.yml` 中按插件 id 覆盖到可写的用户目录：
 
 ```yaml
 - id: billing-attribution
   config:
     displayCurrency: CNY
-    pricingPath: 'E:/programs/dsh-billing-attribution/pricing/profiles.json'
-    ledgerPath: 'E:/programs/dsh-billing-attribution/data/usage-ledger.jsonl'
+    ledgerPath: '<可写数据目录>/usage-ledger.jsonl'
+    searchStatePath: '<可写数据目录>/search-state.json'
     searchLedgerEnabled: true
-    searchLedgerPath: 'E:/programs/deepseed_harness/opencode-search-shim/search-ledger.jsonl'
-    searchStatePath: 'E:/programs/dsh-billing-attribution/data/search-state.json'
+    searchLedgerPath: '<搜索 shim 实际 JSONL 路径>'
     activeProfile: auto
     maxRecentRequests: 20
 ```
 
 `searchLedgerPath` 必须指向实际搜索 shim 的 JSONL；不存在时插件只跳过搜索关联，不影响主模型计费。Host 代码改动后需要重启 DSH web 进程；只改客户端卡片后刷新页面即可。
 
-### 3. 在 DSH 中使用
+### D. 在 DSH 中使用
 
 ```text
 /cost                         查看本轮和会话累计
@@ -151,6 +166,7 @@ dsh plugin --profile web add link:E:/programs/dsh-billing-attribution
 
 ## 详细文档
 
+- [安装与回滚说明](install/README.md)
 - [计费模型与实验边界](docs/BILLING-MODEL.md)
 - [账单格式与拟合方法](docs/BILL-FITTING.md)
 - [可视化计费说明](docs/billing-explainer.html)

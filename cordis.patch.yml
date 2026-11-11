@@ -1,13 +1,15 @@
-# Bundle patch for dsh-billing-attribution.
+# Portable bundle patch for dsh-billing-attribution.
+#
+# The plugin resolves its bundled pricing catalog from its own package directory.
+# The usage ledger and search state default to files inside the installed package;
+# set ledgerPath / searchStatePath in the profile patch when durable user-owned
+# storage is required. Search-ledger correlation is opt-in because its path is
+# specific to each search shim deployment.
 - insert:
     - id: billing-attribution
       name: dsh-billing-attribution
       config:
         displayCurrency: CNY
-        pricingPath: 'E:/programs/dsh-billing-attribution/pricing/profiles.json'
-        ledgerPath: 'E:/programs/dsh-billing-attribution/data/usage-ledger.jsonl'
-        searchLedgerEnabled: true
-        searchLedgerPath: 'E:/programs/deepseed_harness/opencode-search-shim/search-ledger.jsonl'
-        searchStatePath: 'E:/programs/dsh-billing-attribution/data/search-state.json'
+        searchLedgerEnabled: false
         activeProfile: auto
         maxRecentRequests: 20

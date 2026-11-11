@@ -5,6 +5,16 @@
   "type": "module",
   "description": "LLM-free DSH billing attribution, bill import, calibration, and explainable cost reporting.",
   "main": "src/index.js",
+  "keywords": [
+    "deepseek",
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "billing",
+    "cost",
+    "token-usage",
+    "observability"
+  ],
   "exports": {
     ".": "./src/index.js",
     "./client": "./src/client.js",
@@ -13,10 +23,15 @@
   },
   "files": [
     "src",
-    "pricing",
+    "pricing/profiles.json",
     "install",
+    "docs/BILL-FITTING.md",
+    "docs/BILLING-MODEL.md",
+    "docs/billing-explainer.html",
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md",
+    "RELEASE-NOTES-v0.1.0.md"
   ],
   "dsh": {
     "bundle": {
