@@ -26,6 +26,7 @@ flowchart LR
 3. **价格档案**：内置 DeepSeek 官方 API 与 OpenCode Go 两套独立配置；每个会话可用 `/cost profile` 切换。
 4. **账单拟合**：导入 CSV/JSON/JSONL 账单，先按总额拟合账户倍率；请求级样本足够时再拟合分桶单价。
 5. **可追溯**：usage ledger、搜索关联结果和拟合残差都保留在本地文件中。
+6. **贴合原生 UI**：底部原生用量右侧显示“本轮 ¥金额”胶囊；每轮完成行显示“用量 ¥金额 + 时间”；展开明细用金额替换 token 数，并增加搜索行。
 
 ## 快速开始
 
@@ -108,7 +109,7 @@ dsh plugin --profile web add link:E:/programs/dsh-billing-attribution
 /cost profile opencode-go     切换到指定档案
 ```
 
-档案切换只影响切换后的请求，历史请求不重算。计费卡片显示在对话输入区上方；命令结果会作为持久化 flow 节点保留在会话中。
+档案切换只影响切换后的请求，历史请求不重算。计费金额胶囊位于原生“会话统计 / Token 用量”右侧；点击可查看提供方、模型、缓存命中、未缓存输入、缓存读取、输出和搜索金额。每轮完成后，原生 token 用量按钮会替换为带金钱图标的“用量 ¥金额”，时间仍显示在同一行。命令结果会作为持久化 flow 节点保留在会话中。
 
 ## 真实测试结果
 
@@ -116,7 +117,7 @@ dsh plugin --profile web add link:E:/programs/dsh-billing-attribution
 
 | 项目 | 结果 |
 |---|---|
-| `npm test` | **20 / 20 通过**，0 失败 |
+| `npm test` | **21 / 21 通过**，0 失败 |
 | `npm run check` | **17 个 `.js/.mjs` 文件全部通过** `node --check` |
 | 账单导入样例 | 3 条记录，3 条请求级记录，归一化总额 `¥0.009320` |
 | 账单拟合样例 | 3 条 usage、3 条账单、3 条请求级匹配；账户倍率 `1` |
@@ -126,6 +127,7 @@ dsh plugin --profile web add link:E:/programs/dsh-billing-attribution
 | DSH `/cost profiles` | 成功列出两套档案；模型数按实际模型定义计数 |
 | DSH 档案切换 | `/cost profile opencode-go` 成功，后续视图切换为 OpenCode Go，历史金额不变 |
 | 搜索账本关联 | 真实联网搜索已验证：ledger 状态 `settled`，归属第 2 轮第 1 步，搜索请求 1 次，固定费 `¥0.005` |
+| 原生 UI 金额化 | 底部金额胶囊位于原生用量右侧；每轮显示“用量 ¥金额 + 时间”；搜索轮明细显示“搜索 ¥0.005926 · 1 次” |
 
 真实 DSH 测试过程中曾加载旧 Host 代码，卡片与 `/cost explain` 显示内部 token 字段名；重启 Host 后已确认修复。真实搜索验收使用的 ledger 为 `cf744663-8072-42a2-9e6a-3475ae5e98a2`，其中辅助模型 token 与 DeepSeek 搜索固定费分别归因，未使用 shim 自带的旧价格。
 

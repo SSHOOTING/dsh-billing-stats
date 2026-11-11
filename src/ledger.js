@@ -9,7 +9,7 @@ import {
   subtractBuckets,
 } from './pricing.js'
 
-export const BILLING_STATE_VERSION = 1
+export const BILLING_STATE_VERSION = 2
 export const BILLING_PROJECTION_KEY = 'billing'
 
 const EMPTY_COMPONENT_TOTALS = Object.freeze({
@@ -50,11 +50,14 @@ export function initBillingState(header = {}) {
     turnUnknownBuckets: { ...ZERO_BUCKETS },
     turnUnknownComponents: [],
     turnComponentTotals: cloneComponentTotals(EMPTY_COMPONENT_TOTALS),
+    turnBuckets: { ...ZERO_BUCKETS },
+    turnRoutes: [],
     turnRequestCount: 0,
     turnPricedRequestCount: 0,
     turnUnpricedRequestCount: 0,
     lastRequest: null,
     lastTurn: null,
+    turns: {},
     lastUsageAt: null,
     recentRequests: [],
   }
@@ -136,7 +139,7 @@ export function applyBillingEvent(state, event, env) {
   }
 }
 
-export function billingView(state, env, searchNow = null, searchLast = null) {
+export function billingView(state, env, searchNow = null, searchLast = null, searchTurns = null) {
   const turn = state.currentTurn
   const phase = state.turnPhase ?? 'idle'
   const currentSearch = phase === 'active'
@@ -179,6 +182,7 @@ export function billingView(state, env, searchNow = null, searchLast = null) {
     || state.unknownComponents.length > 0
     || (searchNow?.unknownSettlements ?? 0) > 0
   const route = state.route
+  const turnCosts = buildTurnCosts(state, searchTurns)
   let profileId = null
   let profile = null
   try {
@@ -214,6 +218,7 @@ export function billingView(state, env, searchNow = null, searchLast = null) {
     lastTurn,
     componentTotals,
     turnComponentTotals,
+    turnCosts,
     unknownBuckets: state.unknownBuckets,
     unknownComponents: state.unknownComponents,
     unknown,
@@ -340,6 +345,8 @@ function startTurn(state, event) {
     turnUnknownBuckets: { ...ZERO_BUCKETS },
     turnUnknownComponents: [],
     turnComponentTotals: cloneComponentTotals(EMPTY_COMPONENT_TOTALS),
+    turnBuckets: { ...ZERO_BUCKETS },
+    turnRoutes: [],
     turnRequestCount: 0,
     turnPricedRequestCount: 0,
     turnUnpricedRequestCount: 0,
@@ -350,26 +357,33 @@ function startTurn(state, event) {
 
 function endTurn(state, event) {
   const turn = numberOrNull(event.data?.turn) ?? state.currentTurn
+  const lastTurn = {
+    turn,
+    listMicros: state.turnListSpentMicros,
+    billedMicros: state.turnBilledSpentMicros,
+    requestCount: state.turnRequestCount,
+    pricedRequestCount: state.turnPricedRequestCount,
+    unpricedRequestCount: state.turnUnpricedRequestCount,
+    unknownBuckets: state.turnUnknownBuckets,
+    unknownComponents: state.turnUnknownComponents,
+    componentTotals: state.turnComponentTotals,
+    buckets: state.turnBuckets,
+    routes: state.turnRoutes,
+    unknown: state.turnUnpricedRequestCount > 0
+      || hasAnyBuckets(state.turnUnknownBuckets)
+      || state.turnUnknownComponents.length > 0,
+    searchRequestCount: state.turnSearchRequestCount,
+    startedAt: state.turnStartedAt,
+    endedAt: event.time,
+  }
   return {
     ...state,
     inFlight: false,
     turnPhase: 'ended',
-    lastTurn: {
-      turn,
-      listMicros: state.turnListSpentMicros,
-      billedMicros: state.turnBilledSpentMicros,
-      requestCount: state.turnRequestCount,
-      pricedRequestCount: state.turnPricedRequestCount,
-      unpricedRequestCount: state.turnUnpricedRequestCount,
-      unknownBuckets: state.turnUnknownBuckets,
-      unknownComponents: state.turnUnknownComponents,
-      componentTotals: state.turnComponentTotals,
-      unknown: state.turnUnpricedRequestCount > 0
-        || hasAnyBuckets(state.turnUnknownBuckets)
-        || state.turnUnknownComponents.length > 0,
-      searchRequestCount: state.turnSearchRequestCount,
-      startedAt: state.turnStartedAt,
-      endedAt: event.time,
+    lastTurn,
+    turns: {
+      ...(state.turns ?? {}),
+      [String(turn)]: lastTurn,
     },
   }
 }
@@ -427,6 +441,9 @@ function applyUsageEvent(state, event, env) {
     }
   }
   const unknown = isUnknownRequest(request)
+  const routeKey = provider === 'unknown' || model === 'unknown'
+    ? null
+    : `${provider}/${model}`
   const componentTotals = addComponents(next.componentTotals, request.components, unknown)
   const turnComponentTotals = addComponents(next.turnComponentTotals, request.components, unknown)
   const recentRequests = [...next.recentRequests, request]
@@ -450,6 +467,10 @@ function applyUsageEvent(state, event, env) {
     turnUnknownBuckets: addBuckets(next.turnUnknownBuckets, unknownBucketsOf(request)),
     turnUnknownComponents: appendUnique(next.turnUnknownComponents, request.unknownComponents),
     turnComponentTotals,
+    turnBuckets: addBuckets(next.turnBuckets, request.buckets),
+    turnRoutes: routeKey === null
+      ? next.turnRoutes
+      : appendUnique(next.turnRoutes, [routeKey]),
     turnRequestCount: next.turnRequestCount + 1,
     turnPricedRequestCount: next.turnPricedRequestCount + (unknown ? 0 : 1),
     turnUnpricedRequestCount: next.turnUnpricedRequestCount + (unknown ? 1 : 0),
@@ -472,6 +493,7 @@ function removeRequest(state, request) {
     turnBilledSpentMicros: Math.max(0, state.turnBilledSpentMicros - request.billedMicros),
     turnUnknownBuckets: subtractBuckets(state.turnUnknownBuckets, unknownBucketsOf(request)),
     turnComponentTotals: removeComponents(state.turnComponentTotals, request.components),
+    turnBuckets: subtractBuckets(state.turnBuckets, request.buckets),
     turnRequestCount: Math.max(0, state.turnRequestCount - 1),
     turnPricedRequestCount: Math.max(0, state.turnPricedRequestCount - (unknown ? 0 : 1)),
     turnUnpricedRequestCount: Math.max(0, state.turnUnpricedRequestCount - (unknown ? 1 : 0)),
@@ -550,6 +572,54 @@ function mergeComponentTotals(left, right) {
     }
   }
   return next
+}
+
+function buildTurnCosts(state, searchTurns) {
+  const costs = {}
+  for (const [key, base] of Object.entries(state.turns ?? {})) {
+    costs[key] = mergeTurnCost(base, searchTurns?.[key] ?? null)
+  }
+  if (state.currentTurn !== null && (state.turnPhase === 'active' || costs[String(state.currentTurn)] === undefined)) {
+    const key = String(state.currentTurn)
+    costs[key] = mergeTurnCost({
+      turn: state.currentTurn,
+      listMicros: state.turnListSpentMicros,
+      billedMicros: state.turnBilledSpentMicros,
+      requestCount: state.turnRequestCount,
+      componentTotals: state.turnComponentTotals,
+      buckets: state.turnBuckets,
+      routes: state.turnRoutes,
+      unknown: state.turnUnpricedRequestCount > 0
+        || hasAnyBuckets(state.turnUnknownBuckets)
+        || state.turnUnknownComponents.length > 0,
+    }, searchTurns?.[key] ?? null)
+  }
+  return costs
+}
+
+function mergeTurnCost(base, search) {
+  const mainComponentTotals = cloneComponentTotals(base.componentTotals ?? EMPTY_COMPONENT_TOTALS)
+  const searchComponentTotals = cloneComponentTotals(search?.componentTotals ?? {})
+  const searchBilledMicros = search?.billedMicros ?? 0
+  const searchListMicros = search?.listMicros ?? 0
+  const searchRequestCount = search?.settledRequestCount ?? 0
+  return {
+    turn: base.turn,
+    listMicros: base.listMicros + searchListMicros,
+    billedMicros: base.billedMicros + searchBilledMicros,
+    mainListMicros: base.listMicros,
+    mainBilledMicros: base.billedMicros,
+    searchListMicros,
+    searchBilledMicros,
+    requestCount: base.requestCount + searchRequestCount,
+    searchRequestCount,
+    mainComponentTotals,
+    searchComponentTotals,
+    componentTotals: mergeComponentTotals(mainComponentTotals, searchComponentTotals),
+    buckets: { ...ZERO_BUCKETS, ...(base.buckets ?? {}) },
+    routes: Array.isArray(base.routes) ? base.routes : [],
+    unknown: base.unknown === true || (search?.unknownSettlements ?? 0) > 0,
+  }
 }
 
 function aggregateSearchComponentTotals(summary) {
@@ -704,5 +774,11 @@ function assertBillingState(value) {
       || value.turnUnknownBuckets[bucket] < 0) {
       throw new TypeError(`billing state turnUnknown bucket ${bucket} is invalid`)
     }
+    if (!Number.isSafeInteger(value.turnBuckets?.[bucket]) || value.turnBuckets[bucket] < 0) {
+      throw new TypeError(`billing state turn bucket ${bucket} is invalid`)
+    }
+  }
+  if (value.turns === null || typeof value.turns !== 'object' || Array.isArray(value.turns)) {
+    throw new TypeError('billing state turns is invalid')
   }
 }

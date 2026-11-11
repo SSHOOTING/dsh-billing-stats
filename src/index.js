@@ -157,9 +157,16 @@ export function apply(ctx, config = {}) {
   const viewOf = (state) => {
     const turn = state.currentTurn
     const lastTurn = state.lastTurn?.turn ?? null
-    pollSearchState(state.sessionId)
+    const searchState = pollSearchState(state.sessionId)
     const search = searchSummaryFor(state.sessionId, turn, lastTurn)
-    return billingView(state, env, search.now, search.last)
+    const searchTurns = {}
+    for (const turnKey of Object.keys(state.turns ?? {})) {
+      searchTurns[turnKey] = turnSearchSummary(searchState, Number(turnKey))
+    }
+    if (turn !== null) {
+      searchTurns[String(turn)] = turnSearchSummary(searchState, turn)
+    }
+    return billingView(state, env, search.now, search.last, searchTurns)
   }
 
   ctx.sessionProjections.register({

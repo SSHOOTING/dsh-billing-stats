@@ -158,6 +158,44 @@ test('explain renders human labels for token buckets', () => {
   assert.doesNotMatch(text, /uncachedInputTokens|cacheReadTokens|outputTokens/u)
 })
 
+test('exposes per-turn money, token buckets, routes, and search totals', () => {
+  let state = initBillingState({ id: 's6' })
+  state = applyBillingEvent(state, { type: 'turn/start', data: { turn: 1 }, time: 1 }, env)
+  state = applyBillingEvent(state, {
+    type: 'assistant/message',
+    data: {
+      turn: 1,
+      step: 1,
+      usage: { inputTokens: 1000, cacheReadTokens: 200, outputTokens: 10 },
+      message: { source: { provider: 'deepseek', model: 'deepseek-v4.1-flash' } },
+    },
+    time: 2,
+  }, env)
+  state = applyBillingEvent(state, { type: 'turn/end', data: { turn: 1 }, time: 3 }, env)
+  const view = billingView(state, env, null, null, {
+    1: {
+      listMicros: 5000,
+      billedMicros: 3000,
+      settledRequestCount: 1,
+      unknownSettlements: 0,
+      componentTotals: {
+        searchFee: { listMicros: 5000, billedMicros: 3000 },
+      },
+    },
+  })
+  const cost = view.turnCosts['1']
+  assert.equal(cost.turn, 1)
+  assert.equal(cost.billedMicros, view.turnBilledMicros + 3000)
+  assert.equal(cost.searchBilledMicros, 3000)
+  assert.equal(cost.searchRequestCount, 1)
+  assert.deepEqual(cost.routes, ['deepseek/deepseek-v4.1-flash'])
+  assert.equal(cost.buckets.uncachedInputTokens, 1000)
+  assert.equal(cost.buckets.cacheReadTokens, 200)
+  assert.equal(cost.buckets.outputTokens, 10)
+  assert.equal(cost.mainComponentTotals.uncachedInput.billedMicros, 1000)
+  assert.equal(cost.searchComponentTotals.searchFee.billedMicros, 3000)
+})
+
 test('projection key is stable', () => {
   assert.equal(BILLING_PROJECTION_KEY, 'billing')
 })

@@ -44,7 +44,7 @@ test('host plugin registers only observational projection, command, and session 
   assert.equal(listeners.has('session/event'), true)
 })
 
-test('client bundle registers only a dock card', () => {
+test('client bundle registers composer and per-turn money views', () => {
   let loaded
   const sandbox = {
     window: {
@@ -59,11 +59,12 @@ test('client bundle registers only a dock card', () => {
   assert.equal(loaded.id, 'dsh-billing-attribution')
   const client = loaded.factory(() => ({ createElement() { return {} } }))
   const registrations = []
+  const injectedSlots = []
   const ctx = {
     slots: {
       inject(slot, install) {
+        injectedSlots.push(slot)
         install()
-        assert.equal(slot, 'conversation.input.dock')
       },
       register(options, component) {
         registrations.push({ options, component })
@@ -71,9 +72,15 @@ test('client bundle registers only a dock card', () => {
     },
   }
   client.apply(ctx)
-  assert.equal(registrations.length, 1)
+  assert.deepEqual(injectedSlots, [
+    'conversation.composer.dock',
+    'conversation.chat.assistant-actions',
+  ])
+  assert.equal(registrations.length, 2)
   assert.equal(registrations[0].options.id, 'billing-attribution')
   assert.equal(typeof registrations[0].component, 'function')
+  assert.equal(registrations[1].options.id, 'billing-turn-amount')
+  assert.equal(typeof registrations[1].component, 'function')
 })
 
 test('host command exposes profiles, explanation, and profile switching', () => {
