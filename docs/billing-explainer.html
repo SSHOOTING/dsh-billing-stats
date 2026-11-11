@@ -25,9 +25,9 @@ table{width:100%;border-collapse:collapse;background:var(--card);border:1px soli
 </header>
 
 <section class="grid">
-<article class="card"><div class="card-kicker">账单口径</div><div class="metric">¥0.009320</div><p>按当前价格档案归因</p></article>
-<article class="card"><div class="card-kicker">公开价口径</div><div class="metric">¥0.009320</div><p>未乘账户倍率</p></article>
-<article class="card"><div class="card-kicker">请求样本</div><div class="metric">3</div><p>主模型 3 + 搜索 0</p></article>
+<article class="card"><div class="card-kicker">账单口径</div><div class="metric">¥0.3086</div><p>按当前价格档案归因</p></article>
+<article class="card"><div class="card-kicker">公开价口径</div><div class="metric">¥0.3086</div><p>未乘账户倍率</p></article>
+<article class="card"><div class="card-kicker">请求样本</div><div class="metric">37</div><p>主模型 37 + 搜索 0</p></article>
 <article class="card"><div class="card-kicker">导入账单</div><div class="metric">¥0.009320；与归因差 ¥0.000000</div><p>用于拟合与残差检查</p></article>
 </section>
 
@@ -44,7 +44,19 @@ table{width:100%;border-collapse:collapse;background:var(--card);border:1px soli
 <p class="callout"><strong>关键区别：</strong>“输入 token”不是一个桶。缓存命中的部分必须以供应商返回的 <code>cacheReadTokens</code> / <code>cache_read_input_tokens</code> 为准；重复 query 不能证明命中。输出 token 已包含 reasoning，不能再加一遍。</p>
 
 <h2>本次样本的分项占比</h2>
-<p class="muted">还没有可归因请求。先运行 DSH 或把样例 ledger 放到 data/usage-ledger.jsonl。</p>
+<div class="bar-row">
+        <div class="bar-label">输出（含 reasoning）</div>
+        <div class="bar-track"><div class="bar-fill output" style="width:44%"></div></div>
+        <div class="bar-value">¥0.1360 · 44%</div>
+      </div><div class="bar-row">
+        <div class="bar-label">缓存读取</div>
+        <div class="bar-track"><div class="bar-fill cacheRead" style="width:38%"></div></div>
+        <div class="bar-value">¥0.1183 · 38%</div>
+      </div><div class="bar-row">
+        <div class="bar-label">未缓存输入</div>
+        <div class="bar-track"><div class="bar-fill uncachedInput" style="width:18%"></div></div>
+        <div class="bar-value">¥0.0543 · 18%</div>
+      </div>
 
 <h2>哪些变量会改变最终金额</h2>
 <div class="flow">
@@ -61,13 +73,13 @@ table{width:100%;border-collapse:collapse;background:var(--card);border:1px soli
     <h3>DeepSeek 官方 API</h3>
     <p>账户倍率 ×1</p>
     <p class="muted">DeepSeek official list price + peak metadata; search fee pending invoice verification</p>
-    <p>11 个模型价格；待验证</p>
+    <p>2 个模型价格；已验证</p>
   </article><article class="card">
     <div class="card-kicker">订阅/额度口径</div>
     <h3>OpenCode Go</h3>
     <p>账户倍率 ×0.6</p>
     <p class="muted">本账户观测 allowance / list_cost ≈ 0.6；仅账户级经验值，不是供应商全局价格</p>
-    <p>12 个模型价格；已验证</p>
+    <p>2 个模型价格；已验证</p>
   </article></div>
 <table style="margin-top:16px">
 <thead><tr><th>购买方式</th><th>费用形态</th><th>当前状态</th></tr></thead>
@@ -83,30 +95,336 @@ table{width:100%;border-collapse:collapse;background:var(--card);border:1px soli
 <thead><tr><th>类型</th><th>时间</th><th>路由</th><th>状态</th><th>tokens / 数量</th><th>公开价</th><th>账单口径</th><th>未知项</th></tr></thead>
 <tbody><tr>
       <td>主模型</td>
-      <td>2026-11-11T02:02:00.000Z</td>
-      <td>deepseek/deepseek-v4.1-flash</td>
+      <td>2026-11-11T03:24:14.631Z</td>
+      <td>deepseek-official/deepseek-flash</td>
       <td>priced</td>
-      <td>31 / 0 / 0 / 602</td>
-      <td>¥0.006869</td>
-      <td><strong>¥0.006869</strong></td>
+      <td>1103 / 10368 / 0 / 15</td>
+      <td>¥0.002741</td>
+      <td><strong>¥0.002741</strong></td>
       <td></td>
     </tr><tr>
       <td>主模型</td>
-      <td>2026-11-11T02:01:00.000Z</td>
-      <td>deepseek/deepseek-v4.1-flash</td>
+      <td>2026-11-11T03:24:08.760Z</td>
+      <td>deepseek-official/deepseek-flash</td>
       <td>priced</td>
-      <td>60 / 1180 / 0 / 120</td>
-      <td>¥0.000267</td>
-      <td><strong>¥0.000267</strong></td>
+      <td>134 / 10240 / 0 / 54</td>
+      <td>¥0.001110</td>
+      <td><strong>¥0.001110</strong></td>
       <td></td>
     </tr><tr>
       <td>主模型</td>
-      <td>2026-11-11T02:00:00.000Z</td>
-      <td>deepseek/deepseek-v4.1-flash</td>
+      <td>2026-11-11T03:07:40.995Z</td>
+      <td>deepseek-official/deepseek-flash</td>
       <td>priced</td>
-      <td>1200 / 0 / 0 / 180</td>
-      <td>¥0.002184</td>
-      <td><strong>¥0.002184</strong></td>
+      <td>686 / 100096 / 0 / 1026</td>
+      <td>¥0.0136</td>
+      <td><strong>¥0.0136</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T03:07:33.014Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>163 / 99200 / 0 / 766</td>
+      <td>¥0.0104</td>
+      <td><strong>¥0.0104</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T03:07:25.499Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>237 / 98944 / 0 / 86</td>
+      <td>¥0.005120</td>
+      <td><strong>¥0.005120</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T03:07:22.671Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>159 / 98432 / 0 / 549</td>
+      <td>¥0.008647</td>
+      <td><strong>¥0.008647</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T03:07:16.922Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>217 / 98176 / 0 / 88</td>
+      <td>¥0.005065</td>
+      <td><strong>¥0.005065</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T03:07:13.541Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>184 / 96512 / 0 / 1641</td>
+      <td>¥0.0174</td>
+      <td><strong>¥0.0174</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T03:07:04.004Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>157 / 96256 / 0 / 143</td>
+      <td>¥0.005308</td>
+      <td><strong>¥0.005308</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T03:07:01.338Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>1833 / 93696 / 0 / 832</td>
+      <td>¥0.0141</td>
+      <td><strong>¥0.0141</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T03:06:49.667Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>221 / 92800 / 0 / 785</td>
+      <td>¥0.0104</td>
+      <td><strong>¥0.0104</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T03:06:42.637Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>176 / 92672 / 0 / 80</td>
+      <td>¥0.004699</td>
+      <td><strong>¥0.004699</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T03:06:40.401Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>237 / 92160 / 0 / 400</td>
+      <td>¥0.007360</td>
+      <td><strong>¥0.007360</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T03:06:34.938Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>211 / 92032 / 0 / 80</td>
+      <td>¥0.004743</td>
+      <td><strong>¥0.004743</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T03:06:32.705Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>137 / 91648 / 0 / 406</td>
+      <td>¥0.007188</td>
+      <td><strong>¥0.007188</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T03:06:28.014Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>248 / 91136 / 0 / 384</td>
+      <td>¥0.007213</td>
+      <td><strong>¥0.007213</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T03:06:20.816Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>542 / 90368 / 0 / 429</td>
+      <td>¥0.008131</td>
+      <td><strong>¥0.008131</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T03:06:16.768Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>178 / 90112 / 0 / 149</td>
+      <td>¥0.005152</td>
+      <td><strong>¥0.005152</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:57:22.906Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>258 / 89600 / 0 / 278</td>
+      <td>¥0.006324</td>
+      <td><strong>¥0.006324</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:57:17.355Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>8737 / 1536 / 0 / 2</td>
+      <td>¥0.0176</td>
+      <td><strong>¥0.0176</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:57:14.289Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>403 / 88960 / 0 / 450</td>
+      <td>¥0.007964</td>
+      <td><strong>¥0.007964</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:57:10.826Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>599 / 88192 / 0 / 276</td>
+      <td>¥0.006934</td>
+      <td><strong>¥0.006934</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:57:04.476Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>1861 / 85888 / 0 / 538</td>
+      <td>¥0.0115</td>
+      <td><strong>¥0.0115</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:56:56.821Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>683 / 84352 / 0 / 925</td>
+      <td>¥0.0121</td>
+      <td><strong>¥0.0121</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:56:49.616Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>2967 / 80640 / 0 / 862</td>
+      <td>¥0.0161</td>
+      <td><strong>¥0.0161</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:56:40.406Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>198 / 79872 / 0 / 658</td>
+      <td>¥0.008855</td>
+      <td><strong>¥0.008855</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:56:30.884Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>834 / 78464 / 0 / 685</td>
+      <td>¥0.0103</td>
+      <td><strong>¥0.0103</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:56:21.996Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>811 / 77184 / 0 / 554</td>
+      <td>¥0.009141</td>
+      <td><strong>¥0.009141</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:56:15.584Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>385 / 76800 / 0 / 103</td>
+      <td>¥0.004666</td>
+      <td><strong>¥0.004666</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:56:11.870Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>685 / 76032 / 0 / 127</td>
+      <td>¥0.005427</td>
+      <td><strong>¥0.005427</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:56:09.212Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>259 / 75648 / 0 / 173</td>
+      <td>¥0.004928</td>
+      <td><strong>¥0.004928</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:56:05.226Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>335 / 75008 / 0 / 550</td>
+      <td>¥0.008070</td>
+      <td><strong>¥0.008070</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:55:59.794Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>390 / 74496 / 0 / 131</td>
+      <td>¥0.004808</td>
+      <td><strong>¥0.004808</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:55:55.277Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>210 / 73088 / 0 / 1274</td>
+      <td>¥0.0135</td>
+      <td><strong>¥0.0135</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:55:45.457Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>209 / 72832 / 0 / 188</td>
+      <td>¥0.004835</td>
+      <td><strong>¥0.004835</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:55:41.815Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>311 / 72320 / 0 / 218</td>
+      <td>¥0.005259</td>
+      <td><strong>¥0.005259</strong></td>
+      <td></td>
+    </tr><tr>
+      <td>主模型</td>
+      <td>2026-11-11T02:55:37.014Z</td>
+      <td>deepseek-official/deepseek-flash</td>
+      <td>priced</td>
+      <td>168 / 71168 / 0 / 1099</td>
+      <td>¥0.0120</td>
+      <td><strong>¥0.0120</strong></td>
       <td></td>
     </tr></tbody>
 </table>
@@ -121,5 +439,5 @@ table{width:100%;border-collapse:collapse;background:var(--card);border:1px soli
 <div class="flow-step"><b>5. 留痕</b><span class="muted">价格档案写入样本数、方法、残差、验证状态，后续可审计。</span></div>
 </div>
 
-<p class="footer">数据源：usage=<code>E:\programs\dsh-billing-attribution\examples\usage.sample.jsonl</code>；search=<code>未提供</code>；bill=<code>E:\programs\dsh-billing-attribution\examples\bill.sample.csv</code>。生成时间 2026-11-11T02:44:22.192Z。本报告是本地归因，不是供应商发票。</p>
+<p class="footer">数据源：usage=<code>E:\programs\dsh-billing-attribution\data\usage-ledger.jsonl</code>；search=<code>未提供</code>；bill=<code>E:\programs\dsh-billing-attribution\examples\bill.sample.csv</code>。生成时间 2026-11-11T03:32:50.306Z。本报告是本地归因，不是供应商发票。</p>
 </main></body></html>

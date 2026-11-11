@@ -61,7 +61,7 @@ for (const { priced } of pricedUsage) {
       ? 'searchFee'
       : component.category === 'search-token'
         ? 'searchToken'
-        : component.bucket
+        : reportComponentKey(component.bucket)
     if (components[key] === undefined) continue
     components[key].listMicros += component.listMicros ?? 0
     components[key].billedMicros += component.billedMicros ?? 0
@@ -73,7 +73,7 @@ for (const item of searches) {
       ? 'searchFee'
       : component.category === 'search-token'
         ? 'searchToken'
-        : 'searchToken'
+        : reportComponentKey(component.bucket) ?? 'searchToken'
     if (components[key] === undefined) continue
     components[key].listMicros += component.listMicros ?? 0
     components[key].billedMicros += component.billedMicros ?? 0
@@ -291,4 +291,13 @@ function escapeHtml(value) {
     .replace(/>/gu, '&gt;')
     .replace(/"/gu, '&quot;')
     .replace(/'/gu, '&#39;')
+}
+
+function reportComponentKey(bucket) {
+  return {
+    uncachedInputTokens: 'uncachedInput',
+    cacheReadTokens: 'cacheRead',
+    cacheWriteTokens: 'cacheWrite',
+    outputTokens: 'output',
+  }[bucket]
 }
