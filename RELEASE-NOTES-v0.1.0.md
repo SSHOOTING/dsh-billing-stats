@@ -69,5 +69,6 @@ dsh plugin --profile web add https://github.com/SSHOOTING/dsh-billing-stats/rele
 - [x] npm 渠道与包名：`dsh-billing-stats@0.1.0`；
 - [x] npm 2FA：已启用 Windows Hello / security key；
 - [x] npm publish：`https://www.npmjs.com/package/dsh-billing-stats`；
-- [ ] GitHub Release 发布；
+- [x] GitHub Release：
+  `https://github.com/SSHOOTING/dsh-billing-stats/releases/tag/v0.1.0`；
 - [ ] DSH 市场目录 listing 的 PR 与审核。

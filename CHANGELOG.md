@@ -54,4 +54,6 @@
   `https://www.npmjs.com/package/dsh-billing-stats`。
 - 许可证为 MIT；GitHub 仓库为
   `https://github.com/SSHOOTING/dsh-billing-stats`。
+- GitHub Release `v0.1.0` 已发布，并附 npm 同版本 tarball 与 SHA-256 校验文件：
+  `https://github.com/SSHOOTING/dsh-billing-stats/releases/tag/v0.1.0`。
 - DSH 市场目录提交仍需等待仓库创建满 1 天后进行。

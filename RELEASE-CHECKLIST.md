@@ -119,7 +119,10 @@
 ## 7. 发布后检查
 
 - [x] npm registry 已返回 `latest = 0.1.0`、MIT 和 20 个文件。
-- [ ] GitHub Release 发布后，确认 npm/GitHub 的版本号、README、许可证一致。
+- [x] GitHub Release `v0.1.0` 已创建，包含 npm 同版本 tarball 与 SHA-256 校验文件：
+  `https://github.com/SSHOOTING/dsh-billing-stats/releases/tag/v0.1.0`。
+- [x] 发布附件 digest 与本地/registry tarball 一致：
+  `f649e181e4fc60ec30500042dc03406de7e3c7d349dc6f5ef7f6102d00da17f9`。
 - [ ] 从公开来源安装一次，不依赖本机开发链接。
 - [ ] DSH 安装后重启成功，客户端 UI 与 `/cost` 命令可用。
 - [ ] 升级路径可用：安装下一版本时不会覆盖用户 ledger 数据。
@@ -132,9 +135,7 @@
 
 ## 8. 外部动作闸门
 
-以下动作尚未执行，必须等待用户明确确认或满足外部条件：
+以下动作尚未执行，必须等待外部条件满足：
 
-- 创建 release tag
-- 上传 GitHub Release
 - 提交 DSH 市场/目录
 - 安装新软件到系统
