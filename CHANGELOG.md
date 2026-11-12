@@ -50,7 +50,10 @@
 
 ### 发布说明
 
-- 包名统一为 `dsh-billing-stats`，版本号 `0.1.0` 已写入 `package.json`，但**尚未发布**。
-- 许可证已选择 MIT；GitHub 仓库目标为
-  `https://github.com/SSHOOTING/dsh-billing-stats`。上传、npm publish 和 DSH 市场目录
-  提交仍需要对应的登录授权与最终执行确认。
+- 包名统一为 `dsh-billing-stats`，版本 `0.1.0` 已于 2026-11-12 发布到 npm：
+  `https://www.npmjs.com/package/dsh-billing-stats`。
+- 许可证为 MIT；GitHub 仓库为
+  `https://github.com/SSHOOTING/dsh-billing-stats`。
+- GitHub Release `v0.1.0` 已发布，并附 npm 同版本 tarball 与 SHA-256 校验文件：
+  `https://github.com/SSHOOTING/dsh-billing-stats/releases/tag/v0.1.0`。
+- DSH 市场目录提交仍需等待仓库创建满 1 天后进行。

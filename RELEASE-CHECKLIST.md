@@ -14,7 +14,7 @@
 | Node 目标 | `^22.19.0 || >=24.0.0` | 已写入 `engines.node` |
 | 许可证 | MIT | 已写入 `LICENSE` 和 `package.json` |
 | 远端仓库 | `SSHOOTING/dsh-billing-stats` | 已创建为公开仓库，main 已推送 |
-| npm 可发布性 | 已移除 `private`，已设置 public `publishConfig` | 需要 npm 登录/2FA |
+| npm 可发布性 | `dsh-billing-stats@0.1.0` 已发布为 `latest` | 已完成 |
 | DSH 市场 | 用户选择提交 | 需要 GitHub 登录、仓库公开和目录 PR |
 
 ### 渠道建议（供选择，不代表已选定）
@@ -63,10 +63,15 @@
   `F649E181E4FC60EC30500042DC03406DE7E3C7D349DC6F5EF7F6102D00DA17F9`。
 - [x] 已确认改名后的 tarball 不含 `data/*`、`reports/`、`experiments/`、
   `pricing/fitted/`。
-- [x] `npm publish --dry-run --access public` 成功；命令仅提示当前未登录 npm，
-  未上传任何内容。
+- [x] npm 账户已启用 auth-and-writes 2FA（Windows Hello / security key）。
+- [x] `npm publish --access public` 已于 2026-11-12 成功：
+  `dsh-billing-stats@0.1.0`，dist-tag 为 `latest`。
+- [x] npm registry 已确认 tarball：
+  `https://registry.npmjs.org/dsh-billing-stats/-/dsh-billing-stats-0.1.0.tgz`。
 - [x] 已确认 README、CHANGELOG、LICENSE、发布说明、安装文档和两份计费 docs
   均在 tarball 中。
+- [x] npm 在首次 staged publishing 流程中自动创建了 `0.0.0-stage` 占位版本；
+  `latest` 正确指向 `0.1.0`。
 
 ## 4. 安装与 DSH 重启验证
 
@@ -79,7 +84,11 @@
 - [x] GitHub 公开仓库已创建并配置 remote：`origin` 指向
   `https://github.com/SSHOOTING/dsh-billing-stats.git`。
 - [x] GitHub topic 已设置：`dsh-plugin`、`deepseek-harness`、`billing`。
-- [ ] 在用户确认后，用**独立临时 profile**安装最终 tarball 或 npm 包。
+- [x] 已在隔离临时 `DSH_HOME` 中从 npm 安装 `dsh-billing-stats@0.1.0`：
+  pnpm 成功安装，profile 自动加入依赖和 `dsh.profile.bundles`。
+- [x] 临时 profile 的 `dsh --profile web --dump-config` 成功合成
+  `billing-attribution`，并加载可移植 bundle patch：
+  `displayCurrency=CNY`、`searchLedgerEnabled=false`。
 - [ ] 重启 DSH web 进程，确认日志出现 `[billing-stats] active`。
 - [ ] 执行 `/cost`、`/cost explain`、`/cost profiles`。
 - [ ] 发一轮受控请求，确认底部会话金额、每轮金额和展开明细。
@@ -104,13 +113,16 @@
   `publishConfig`。
 - [x] 已重新生成候选 tarball `dsh-billing-stats-0.1.0.tgz` 并计算哈希。
 - [x] SHA-256 校验和文件：`.release-artifacts/SHA256SUMS`。
-- [ ] GitHub Release 说明采用 `RELEASE-NOTES-v0.1.0.md` 的最终版本。
-- [ ] 发布说明明确标注“归因结果不是发票”。
+- [x] GitHub Release 说明采用 `RELEASE-NOTES-v0.1.0.md` 的最终版本。
+- [x] 发布说明明确标注“结果不是供应商发票”。
 
 ## 7. 发布后检查
 
-- [ ] npm 包页面和 GitHub Release 的版本号、README、许可证一致。
-- [ ] npm 当前未登录；执行 `npm login` 后才能发布。
+- [x] npm registry 已返回 `latest = 0.1.0`、MIT 和 20 个文件。
+- [x] GitHub Release `v0.1.0` 已创建，包含 npm 同版本 tarball 与 SHA-256 校验文件：
+  `https://github.com/SSHOOTING/dsh-billing-stats/releases/tag/v0.1.0`。
+- [x] 发布附件 digest 与本地/registry tarball 一致：
+  `f649e181e4fc60ec30500042dc03406de7e3c7d349dc6f5ef7f6102d00da17f9`。
 - [ ] 从公开来源安装一次，不依赖本机开发链接。
 - [ ] DSH 安装后重启成功，客户端 UI 与 `/cost` 命令可用。
 - [ ] 升级路径可用：安装下一版本时不会覆盖用户 ledger 数据。
@@ -118,15 +130,12 @@
 - [ ] 如提交 DSH 市场：确认 catalog 条目、安装源、版本和兼容范围一致。
 - [x] 已准备 awesome-dsh-plugin 目录条目：
   `market/awesome-dsh-plugin.yml`。
-- [ ] GitHub 仓库创建于 `2026-11-11T13:49:11Z`，至少满 1 天后才能提交目录 PR。
+- [ ] GitHub 仓库创建于 `2026-11-11T13:49:11Z`，需等到
+  `2026-11-12T13:49:11Z` 后才能提交目录 PR。
 
 ## 8. 外部动作闸门
 
-以下动作尚未执行，必须等待用户明确确认或完成登录：
+以下动作尚未执行，必须等待外部条件满足：
 
-- `npm publish`
-- `npm login` / npm 2FA
-- 创建 release tag
-- 上传 GitHub Release
 - 提交 DSH 市场/目录
 - 安装新软件到系统

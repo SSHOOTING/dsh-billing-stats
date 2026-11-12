@@ -4,8 +4,8 @@
 用户导入的供应商账单，转换为可解释的费用统计。它不调用 LLM、不联网请求模型、不修改
 请求、思考档位或 `maxTokens`，也不阻断工具调用。
 
-> 本文件是发布说明草稿。当前已确认 npm 渠道、包名 `dsh-billing-stats`、MIT 许可证和
-> GitHub 仓库目标 `SSHOOTING/dsh-billing-stats`；发布账号与最终发布动作仍需确认。
+> npm 包已发布：`https://www.npmjs.com/package/dsh-billing-stats`。MIT 许可证、
+> GitHub 仓库和 DSH web profile 兼容范围均已确认。
 
 ## 亮点
 
@@ -24,14 +24,13 @@
 - 安装：DSH profile 通过 `dsh plugin --profile <profile> add ...` 转发到 pnpm；插件无
   构建步骤。
 
-## 安装（发布后填写真实渠道）
+## 安装
 
 ```powershell
-# npm 渠道确认并发布后
 dsh plugin --profile web add dsh-billing-stats@0.1.0
 
-# 或 GitHub Release 提供的同版本 tarball
-dsh plugin --profile web add <release-tarball-url-or-local-path>
+# 或使用 GitHub Release 提供的同版本 tarball
+dsh plugin --profile web add https://github.com/SSHOOTING/dsh-billing-stats/releases/download/v0.1.0/dsh-billing-stats-0.1.0.tgz
 ```
 
 安装后重启 DSH，然后在会话中执行：
@@ -63,12 +62,13 @@ dsh plugin --profile web add <release-tarball-url-or-local-path>
 - 搜索关联在缺少精确 request id 时是 best-effort。
 - 发布包若使用默认包内 ledger 路径，升级时可能丢失数据；长期使用应覆盖到用户目录。
 
-## 发布前状态
+## 发布状态
 
 - [x] 许可证：MIT，`LICENSE` 已加入；
-- [x] GitHub 仓库目标：`SSHOOTING/dsh-billing-stats`，元数据已写入 `package.json`；
-- [x] npm 渠道与包名：`dsh-billing-stats`；
-- [ ] GitHub 登录、创建远端仓库与 push；
-- [ ] npm 登录与 2FA；
-- [ ] GitHub Release 或 npm 的最终发布动作；
+- [x] GitHub 仓库：`SSHOOTING/dsh-billing-stats`，公开并已推送；
+- [x] npm 渠道与包名：`dsh-billing-stats@0.1.0`；
+- [x] npm 2FA：已启用 Windows Hello / security key；
+- [x] npm publish：`https://www.npmjs.com/package/dsh-billing-stats`；
+- [x] GitHub Release：
+  `https://github.com/SSHOOTING/dsh-billing-stats/releases/tag/v0.1.0`；
 - [ ] DSH 市场目录 listing 的 PR 与审核。
