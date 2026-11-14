@@ -47,6 +47,19 @@ window.__ModuleLoader__.load({
       return `¥${amount.toFixed(digits)}`
     }
 
+    function formatCost(cost) {
+      const billedMicros = cost?.billedMicros ?? 0
+      if (cost?.unknown !== true) return formatMoney(billedMicros)
+      return billedMicros > 0 ? formatMoney(billedMicros) : '金额未知'
+    }
+
+    function costAriaLabel(cost, prefix) {
+      const amount = formatCost(cost)
+      const source = sourceLabel(cost)
+      if (amount === '金额未知') return `${prefix}未知`
+      return `${prefix} ${amount}${source === '' ? '' : `，${source}`}`
+    }
+
     function MoneyIcon() {
       return h('svg', {
         viewBox: '0 0 16 16',
@@ -80,6 +93,60 @@ window.__ModuleLoader__.load({
 
     function componentAmount(cost, key) {
       return cost?.mainComponentTotals?.[key]?.billedMicros ?? 0
+    }
+
+    const bucketByComponent = {
+      uncachedInput: 'uncachedInputTokens',
+      cacheRead: 'cacheReadTokens',
+      cacheWrite: 'cacheWriteTokens',
+      output: 'outputTokens',
+    }
+
+    function formatComponent(cost, key) {
+      const amount = componentAmount(cost, key)
+      const unknownComponents = cost?.unknownComponents ?? []
+      const bucket = bucketByComponent[key]
+      const unknown = cost?.unknown === true && (
+        unknownComponents.includes('usage')
+        || unknownComponents.includes(`rate:${bucket}`)
+        || unknownComponents.some(value => value.endsWith(`:${bucket}`))
+      )
+      if (!unknown) return formatMoney(amount)
+      return amount > 0 ? formatMoney(amount) : '未知'
+    }
+
+    const sourceLabels = {
+      bill: '账单明细',
+      usage: '官方用量',
+      estimate: '文本估算',
+      unknown: '未知',
+    }
+
+    function activeSources(cost) {
+      return Object.entries(cost?.costSourceStats ?? {})
+        .filter(([, value]) => (value?.requestCount ?? 0) > 0)
+        .map(([source, value]) => ({
+          source,
+          label: sourceLabels[source] ?? source,
+          requestCount: value.requestCount ?? 0,
+          billedMicros: value.billedMicros ?? 0,
+        }))
+    }
+
+    function sourceLabel(cost) {
+      const sources = activeSources(cost)
+      if (sources.length === 0) return ''
+      if (sources.length === 1) return sources[0].label
+      return '混合来源'
+    }
+
+    function sourceDetail(cost) {
+      const sources = activeSources(cost)
+      return sources.length === 0
+        ? '未记录'
+        : sources
+            .map(item => `${item.label} ${formatMoney(item.billedMicros)}（${item.requestCount} 次）`)
+            .join('；')
     }
 
     function addComponents(target, source) {
@@ -125,6 +192,8 @@ window.__ModuleLoader__.load({
         searchRequestCount,
         requestCount,
         unknown: projection.unknown,
+        unknownComponents: projection.unknownComponents ?? [],
+        costSourceStats: projection.costSourceStats ?? {},
       }
     }
 
@@ -164,14 +233,23 @@ window.__ModuleLoader__.load({
       const searchText = `${formatMoney(cost.searchBilledMicros)}${
         cost.searchRequestCount > 0 ? ` · ${cost.searchRequestCount} 次` : ''
       }`
+      const hasBill = componentAmount(cost, 'bill') > 0
       const rows = [
-        ...(cacheHit === null ? [] : [['缓存命中', cacheHit]]),
-        ['未缓存输入', formatMoney(componentAmount(cost, 'uncachedInput'))],
-        ['缓存读取', formatMoney(componentAmount(cost, 'cacheRead'))],
-        ...(componentAmount(cost, 'cacheWrite') > 0
-          ? [['缓存写入', formatMoney(componentAmount(cost, 'cacheWrite'))]]
-          : []),
-        ['输出', formatMoney(componentAmount(cost, 'output'))],
+        ['费用来源', sourceDetail(cost)],
+        ...(hasBill
+          ? [
+              ['账单合计', formatMoney(componentAmount(cost, 'bill'))],
+              ['公开价参考', formatMoney(cost.listMicros)],
+            ]
+          : [
+              ...(cacheHit === null ? [] : [['缓存命中', cacheHit]]),
+              ['未缓存输入', formatComponent(cost, 'uncachedInput')],
+              ['缓存读取', formatComponent(cost, 'cacheRead')],
+              ...(componentAmount(cost, 'cacheWrite') > 0
+                ? [['缓存写入', formatComponent(cost, 'cacheWrite')]]
+                : []),
+              ['输出', formatComponent(cost, 'output')],
+            ]),
         ['搜索', searchText],
       ]
       return ReactDOM.createPortal(
@@ -184,7 +262,7 @@ window.__ModuleLoader__.load({
         },
         h('div', { className: 'billing-head' },
           h('span', { className: 'billing-head-label' }, h(MoneyIcon), title),
-          h('span', { className: 'billing-head-value' }, formatMoney(cost.billedMicros)),
+          h('span', { className: 'billing-head-value' }, formatCost(cost)),
         ),
         h('div', { className: 'billing-rule', 'aria-hidden': true }),
         h('dl', { className: 'billing-details' },
@@ -194,7 +272,11 @@ window.__ModuleLoader__.load({
           ]),
         ),
         cost.unknown
-          ? h('div', { className: 'billing-unknown' }, '存在未知分项：缺 usage 或缺价格，未按 0 计算。')
+          ? h('div', { className: 'billing-unknown' },
+              '存在未定价请求：金额只统计了已有证据的部分，未定价请求会在来源明细中单列。')
+          : activeSources(cost).some(item => item.source === 'estimate')
+            ? h('div', { className: 'billing-unknown' },
+                '含文本估算：按可见字符数折算 token，可能与供应商账单不同。')
           : null,
         ),
         document.body,
@@ -216,17 +298,20 @@ window.__ModuleLoader__.load({
         || projection.turnPhase === 'active'
       if (!hasData) return null
       const cost = sessionCost(projection)
+      const amount = formatCost(cost)
+      const source = sourceLabel(cost)
       return h('span', { ref: dialog.rootRef, 'data-billing-composer-pill-root': true },
         h('button', {
           type: 'button',
           'data-billing-composer-pill': true,
           'aria-haspopup': 'dialog',
           'aria-expanded': dialog.open,
-          'aria-label': `会话费用 ${formatMoney(cost.billedMicros)}`,
+          'aria-label': costAriaLabel(cost, '会话费用'),
           onClick: () => dialog.setOpen(!dialog.open),
         },
         h(MoneyIcon),
-        h('span', { className: 'billing-label' }, `会话 ${formatMoney(cost.billedMicros)}`),
+        h('span', { className: 'billing-label' },
+          `会话 ${amount}${source === '' ? '' : ` · ${source}`}`),
         ),
         dialog.open
           ? h(CostPanel, {
@@ -256,17 +341,20 @@ window.__ModuleLoader__.load({
       if (turn === null || projection === undefined) return null
       const cost = projection.turnCosts?.[String(turn)]
       if (cost === undefined || (cost.requestCount === 0 && cost.billedMicros === 0)) return null
+      const amount = formatCost(cost)
+      const source = sourceLabel(cost)
       return h('span', { ref: dialog.rootRef, 'data-billing-turn-cost': true },
         h('button', {
           type: 'button',
           'data-billing-turn-pill': true,
           'aria-haspopup': 'dialog',
           'aria-expanded': dialog.open,
-          'aria-label': `本轮用量费用 ${formatMoney(cost.billedMicros)}`,
+          'aria-label': costAriaLabel(cost, '本轮用量费用'),
           onClick: () => dialog.setOpen(!dialog.open),
         },
         h(MoneyIcon),
-        h('span', { className: 'billing-label' }, `用量 ${formatMoney(cost.billedMicros)}`),
+        h('span', { className: 'billing-label' },
+          `用量 ${amount}${source === '' ? '' : ` · ${source}`}`),
         ),
         dialog.open
           ? h(CostPanel, {

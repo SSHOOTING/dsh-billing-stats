@@ -38,6 +38,7 @@ import {
   priceSearchLedgerRecord,
   priceUsage,
 } from './pricing.js'
+import { estimateUsageForRequest } from './evidence.js'
 import {
   initHostSearchLedgerState,
   observeSearchRequest,
@@ -52,6 +53,7 @@ const DEFAULT_PRICING_PATH = fileURLToPath(new URL('../pricing/profiles.json', i
 const DEFAULT_LEDGER_PATH = fileURLToPath(new URL('../data/usage-ledger.jsonl', import.meta.url))
 const DEFAULT_SEARCH_STATE_PATH = fileURLToPath(new URL('../data/search-state.json', import.meta.url))
 const DEFAULT_SEARCH_LEDGER_PATH = 'E:\\programs\\deepseed_harness\\opencode-search-shim\\search-ledger.jsonl'
+const DEFAULT_BILL_DETAIL_PATH = fileURLToPath(new URL('../data/bill.normalized.jsonl', import.meta.url))
 
 export function resolveConfig(config = {}) {
   const displayCurrency = String(config.displayCurrency ?? 'CNY').toUpperCase()
@@ -65,6 +67,7 @@ export function resolveConfig(config = {}) {
     searchLedgerEnabled: config.searchLedgerEnabled !== false,
     searchLedgerPath: nonEmptyString(config.searchLedgerPath) ?? DEFAULT_SEARCH_LEDGER_PATH,
     searchStatePath: nonEmptyString(config.searchStatePath) ?? DEFAULT_SEARCH_STATE_PATH,
+    billDetailPath: nonEmptyString(config.billDetailPath) ?? DEFAULT_BILL_DETAIL_PATH,
     activeProfile: nonEmptyString(config.activeProfile) ?? 'auto',
     maxRecentRequests: safeIntegerAtLeast(config.maxRecentRequests ?? 20, 1, 'maxRecentRequests'),
   }
@@ -82,7 +85,11 @@ export function apply(ctx, config = {}) {
   if (resolved.activeProfile !== 'auto' && !pricing.profiles.has(resolved.activeProfile)) {
     throw new Error(`dsh-billing-stats: unknown activeProfile ${resolved.activeProfile}`)
   }
-  const env = { ...resolved, pricing }
+  const env = {
+    ...resolved,
+    pricing,
+    billDetails: loadBillDetailMap(resolved.billDetailPath),
+  }
   const searchStates = new Map(Object.entries(loadJsonObject(resolved.searchStatePath)))
 
   const persistSearchStates = () => {
@@ -262,21 +269,46 @@ function usageRecordFromEvent(session, event, env, state) {
   const source = event.data?.message?.source
   const route = source !== null && typeof source === 'object'
     ? { provider: source.provider, model: source.model }
-    : state.route
+    : state?.route
   if (route === null || typeof route?.provider !== 'string' || typeof route?.model !== 'string') {
     return null
   }
   const requestKey = `${session.id}:${turn}:${step}`
-  const priced = usage === undefined
+  const billDetail = env.billDetails instanceof Map
+    ? env.billDetails.get(`${session.id}:${turn}:${step}`) ?? null
+    : null
+  const estimated = usage === undefined ? estimateUsageForRequest(state ?? {}, event) : null
+  const pricedUsage = usage ?? estimated?.usage
+  const priced = pricedUsage === undefined
     ? null
     : priceUsage(env.pricing, {
         provider: route.provider,
         model: route.model,
-        usage,
-        profile: state.activeProfileOverride,
+        usage: pricedUsage,
+        profile: state?.activeProfileOverride ?? env.activeProfile,
         at: event.time,
         requestKind: 'model',
       })
+  const estimatedEmpty = estimated !== null
+    && estimated.usage.uncachedInputTokens === 0
+    && estimated.usage.outputTokens === 0
+  const costSource = billDetail !== null
+    ? 'bill'
+    : usage !== undefined
+      ? priced?.status === 'unknown' ? 'unknown' : 'usage'
+      : priced?.status === 'unknown' || estimatedEmpty ? 'unknown' : 'estimate'
+  const status = billDetail !== null
+    ? 'priced'
+    : costSource === 'unknown'
+      ? 'unknown'
+      : costSource === 'estimate' && priced?.status === 'priced'
+        ? 'estimated'
+        : priced?.status ?? 'unknown'
+  const unknownComponents = billDetail !== null
+    ? []
+    : costSource === 'unknown'
+      ? priced?.unknownComponents ?? (usage === undefined ? ['estimate'] : ['usage'])
+      : priced?.unknownComponents ?? []
   return {
     schema: 'dsh.billing.usage.v1',
     event: 'upsert',
@@ -287,16 +319,29 @@ function usageRecordFromEvent(session, event, env, state) {
     observedAt: new Date(event.time ?? Date.now()).toISOString(),
     provider: route.provider,
     model: route.model,
-    profileId: priced?.profileId ?? chooseProfileId(env.pricing, route.provider, state.activeProfileOverride),
-    status: priced?.status ?? 'unknown',
-    buckets: priced?.buckets ?? normalizeUsage(usage),
+    profileId: billDetail?.profile
+      ?? priced?.profileId
+      ?? chooseProfileId(env.pricing, route.provider, state?.activeProfileOverride ?? env.activeProfile),
+    status,
+    costSource,
+    buckets: billDetail !== null && billBuckets(billDetail) !== null
+      ? billBuckets(billDetail)
+      : priced?.buckets ?? normalizeUsage(pricedUsage),
     components: priced?.components ?? [],
-    unknownComponents: priced?.unknownComponents ?? ['usage'],
+    unknownComponents,
     listMicros: priced?.listMicros ?? 0,
-    billedMicros: priced?.billedMicros ?? 0,
+    billedMicros: billDetail?.amountMicros ?? priced?.billedMicros ?? 0,
     accountMultiplier: priced?.accountMultiplier ?? null,
     pricingVerified: priced?.pricingVerified ?? false,
     peak: priced?.peak ?? null,
+    estimate: estimated?.evidence ?? null,
+    billDetail: billDetail === null
+      ? null
+      : {
+          sourceRow: billDetail.sourceRow ?? null,
+          requestId: billDetail.requestId ?? null,
+          requestKey: billDetail.requestKey ?? null,
+        },
     origin: session.header?.origin ?? null,
     parentSessionId: session.header?.parentSession ?? null,
   }
@@ -330,6 +375,48 @@ function loadJsonObject(path) {
     )
     return {}
   }
+}
+
+function loadBillDetailMap(path) {
+  const records = new Map()
+  try {
+    if (!existsSync(path)) return records
+    const lines = readFileSync(path, 'utf8').split(/\r?\n/u)
+    for (const line of lines) {
+      if (line.trim() === '') continue
+      let record
+      try {
+        record = JSON.parse(line)
+      } catch {
+        continue
+      }
+      if (record === null || typeof record !== 'object' || Array.isArray(record)) continue
+      if (typeof record.requestKey === 'string' && record.requestKey !== '') {
+        records.set(record.requestKey, record)
+      }
+      if (typeof record.sessionId === 'string'
+        && Number.isSafeInteger(record.turn)
+        && Number.isSafeInteger(record.step)) {
+        records.set(`${record.sessionId}:${record.turn}:${record.step}`, record)
+      }
+    }
+  } catch (error) {
+    console.warn(
+      `[${name}] could not read bill details ${path}: `
+      + `${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
+  return records
+}
+
+function billBuckets(record) {
+  const buckets = {
+    uncachedInputTokens: record?.inputTokens ?? 0,
+    cacheReadTokens: record?.cacheReadTokens ?? 0,
+    cacheWriteTokens: record?.cacheWriteTokens ?? 0,
+    outputTokens: record?.outputTokens ?? 0,
+  }
+  return Object.values(buckets).some(value => value > 0) ? buckets : null
 }
 
 function saveJsonObject(path, value) {
