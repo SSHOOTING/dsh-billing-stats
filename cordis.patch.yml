@@ -11,6 +11,8 @@
       name: dsh-billing-stats
       config:
         displayCurrency: CNY
+        # Optional request-level bill JSONL produced by `npm run bill:import`.
+        # billDetailPath: '<writable data directory>/bill.normalized.jsonl'
         searchLedgerEnabled: false
         activeProfile: auto
         maxRecentRequests: 20

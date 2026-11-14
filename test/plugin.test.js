@@ -83,6 +83,140 @@ test('client bundle registers composer and per-turn money views', () => {
   assert.equal(typeof registrations[1].component, 'function')
 })
 
+test('client distinguishes unknown cost from a real zero amount', () => {
+  let loaded
+  const sandbox = {
+    window: {
+      __ModuleLoader__: {
+        load(value) {
+          loaded = value
+        },
+      },
+    },
+  }
+  vm.runInNewContext(readFileSync(new URL('../src/client.js', import.meta.url), 'utf8'), sandbox)
+  const React = {
+    createElement(type, props, ...children) {
+      return { type, props: props ?? {}, children }
+    },
+    useState(initial) {
+      return [initial, () => {}]
+    },
+    useRef(initial) {
+      return { current: initial }
+    },
+    useCallback(callback) {
+      return callback
+    },
+    useEffect() {},
+  }
+  const client = loaded.factory(name => name === 'react'
+    ? React
+    : { createPortal(node) { return node } })
+  const registrations = []
+  client.apply({
+    slots: {
+      inject(slot, install) {
+        install()
+      },
+      register(options, component) {
+        registrations.push({ options, component })
+      },
+    },
+  })
+  const turnCost = {
+    turn: 1,
+    billedMicros: 0,
+    listMicros: 0,
+    requestCount: 1,
+    unknown: true,
+    unknownComponents: ['usage'],
+    buckets: {},
+    mainComponentTotals: {},
+    searchComponentTotals: {},
+    searchBilledMicros: 0,
+    searchRequestCount: 0,
+  }
+  const projection = {
+    billedSpentMicros: 0,
+    listSpentMicros: 0,
+    componentTotals: {},
+    unknown: true,
+    unknownComponents: ['usage'],
+    turnCosts: { 1: turnCost },
+  }
+  const sessionNode = registrations[0].component({
+    useProjection: () => projection,
+  })
+  assert.match(collectText(sessionNode), /会话 金额未知/u)
+  assert.equal(findByProp(sessionNode, 'data-billing-composer-pill')?.props['aria-label'], '会话费用未知')
+
+  const estimateStats = {
+    bill: { requestCount: 0, listMicros: 0, billedMicros: 0 },
+    usage: { requestCount: 0, listMicros: 0, billedMicros: 0 },
+    estimate: { requestCount: 1, listMicros: 123_456, billedMicros: 123_456 },
+    unknown: { requestCount: 0, listMicros: 0, billedMicros: 0 },
+  }
+  const estimateCost = {
+    ...turnCost,
+    billedMicros: 123_456,
+    listMicros: 123_456,
+    unknown: false,
+    unknownComponents: [],
+    costSourceStats: estimateStats,
+  }
+  const estimateProjection = {
+    ...projection,
+    billedSpentMicros: 123_456,
+    listSpentMicros: 123_456,
+    unknown: false,
+    unknownComponents: [],
+    costSourceStats: estimateStats,
+    turnCosts: { 1: estimateCost },
+  }
+  const estimateSessionNode = registrations[0].component({
+    useProjection: () => estimateProjection,
+  })
+  assert.match(collectText(estimateSessionNode), /会话 ¥0\.1235 · 文本估算/u)
+  assert.equal(
+    findByProp(estimateSessionNode, 'data-billing-composer-pill')?.props['aria-label'],
+    '会话费用 ¥0.1235，文本估算',
+  )
+
+  const snapshot = {
+    timeline: {
+      turnOrder: [1],
+      turns: new Map([[
+        1,
+        {
+          data: new Map([[
+            'turn-tail',
+            { closing: { finalNode: { messageId: 'message-1' } } },
+          ]]),
+        },
+      ]]),
+    },
+  }
+  const turnNode = registrations[1].component({
+    messageId: 'message-1',
+    useChat: selector => selector(snapshot),
+    useProjection: () => projection,
+  })
+  assert.match(collectText(turnNode), /用量 金额未知/u)
+  assert.equal(findByProp(turnNode, 'data-billing-turn-pill')?.props['aria-label'], '本轮用量费用未知')
+
+  const estimateTurnNode = registrations[1].component({
+    messageId: 'message-1',
+    useChat: selector => selector(snapshot),
+    useProjection: () => estimateProjection,
+  })
+  assert.match(collectText(estimateTurnNode), /用量 ¥0\.1235 · 文本估算/u)
+  assert.equal(
+    findByProp(estimateTurnNode, 'data-billing-turn-pill')?.props['aria-label'],
+    '本轮用量费用 ¥0.1235，文本估算',
+  )
+})
+
 test('host command exposes profiles, explanation, and profile switching', () => {
   let command
   let currentState = initBillingState({ id: 'session-command' })
@@ -146,3 +280,20 @@ test('host command exposes profiles, explanation, and profile switching', () => 
   assert.equal(switched.kind, 'success')
   assert.match(switched.text, /opencode-go/u)
 })
+
+function collectText(node) {
+  if (node === null || node === undefined) return ''
+  if (typeof node === 'string' || typeof node === 'number') return String(node)
+  if (Array.isArray(node)) return node.map(collectText).join('')
+  return (node.children ?? []).map(collectText).join('')
+}
+
+function findByProp(node, prop) {
+  if (node === null || node === undefined || typeof node !== 'object') return null
+  if (node.props?.[prop] !== undefined) return node
+  for (const child of node.children ?? []) {
+    const found = findByProp(child, prop)
+    if (found !== null) return found
+  }
+  return null
+}

@@ -5,6 +5,7 @@ import {
   applyBillingEvent,
   billingView,
   initBillingState,
+  renderBillingSummary,
   renderLastRequest,
 } from '../src/ledger.js'
 import { createPricingCatalog } from '../src/pricing.js'
@@ -82,7 +83,7 @@ test('replaces duplicate usage for the same turn/step instead of double counting
   assert.equal(state.recentRequests.length, 1)
 })
 
-test('unknown usage counts as unknown and never zero-priced success', () => {
+test('missing usage without estimable content remains unknown', () => {
   let state = initBillingState({ id: 's3' })
   state = applyBillingEvent(state, { type: 'turn/start', data: { turn: 1 }, time: 1 }, env)
   state = applyBillingEvent(state, {
@@ -92,8 +93,154 @@ test('unknown usage counts as unknown and never zero-priced success', () => {
   }, env)
   const view = billingView(state, env)
   assert.equal(view.unknown, true)
+  assert.equal(view.turnUnknown, true)
   assert.equal(view.unpricedRequestCount, 1)
   assert.equal(view.lastRequest.status, 'unknown')
+  assert.equal(view.lastRequest.costSource, 'unknown')
+  assert.deepEqual(view.turnCosts['1'].unknownComponents, ['estimate'])
+  const summary = renderBillingSummary(view, pricing)
+  assert.match(summary, /账单口径 未知/u)
+  assert.match(summary, /公开价 未知/u)
+  assert.match(summary, /费用来源：未知/u)
+  assert.doesNotMatch(summary, /¥0\.000000/u)
+  const text = renderLastRequest(view)
+  assert.match(text, /账单口径：未知/u)
+  assert.match(text, /tokens：未知/u)
+  assert.match(text, /可用于文本估算的内容/u)
+  assert.doesNotMatch(text, /¥0\.000000/u)
+})
+
+test('falls back to text estimate when official usage is missing', () => {
+  let state = initBillingState({ id: 's-estimate' })
+  state = applyBillingEvent(state, { type: 'turn/start', data: { turn: 1 }, time: 1 }, env)
+  state = applyBillingEvent(state, {
+    type: 'request/header',
+    data: {
+      header: {
+        config: { provider: 'deepseek', model: 'deepseek-v4.1-flash' },
+        tools: [{ name: 'read', description: 'Read a file' }],
+      },
+    },
+  }, env)
+  state = applyBillingEvent(state, {
+    type: 'system/message',
+    data: {
+      turn: 1,
+      step: 1,
+      message: {
+        id: 'system-1',
+        role: 'system',
+        content: [{ type: 'text', text: 'You are a coding agent.' }],
+      },
+    },
+  }, env)
+  state = applyBillingEvent(state, {
+    type: 'user/message',
+    data: {
+      id: 'user-1',
+      role: 'user',
+      content: [{ type: 'text', text: '请解释这段文字，并继续写下去。' }],
+    },
+  }, env)
+  state = applyBillingEvent(state, {
+    type: 'assistant/message',
+    data: {
+      turn: 1,
+      step: 1,
+      interrupted: true,
+      message: {
+        id: 'assistant-1',
+        role: 'assistant',
+        source: { provider: 'deepseek', model: 'deepseek-v4.1-flash' },
+        content: [
+          { type: 'reasoning', text: 'Think about the literary context and structure.' },
+          { type: 'text', text: '你写到「沉溺」就停了。' },
+        ],
+      },
+    },
+    time: 2,
+  }, env)
+  const view = billingView(state, env)
+  assert.equal(view.lastRequest.costSource, 'estimate')
+  assert.equal(view.lastRequest.status, 'estimated')
+  assert.equal(view.lastRequest.estimate.method, 'character-heuristic-v1')
+  assert.ok(view.lastRequest.billedMicros > 0)
+  assert.equal(view.unknown, false)
+  assert.equal(view.costSourceStats.estimate.requestCount, 1)
+  assert.equal(view.costSourceStats.usage.requestCount, 0)
+  const summary = renderBillingSummary(view, pricing)
+  assert.match(summary, /会话费用来源：文本估算/u)
+  assert.doesNotMatch(summary, /\+ 未知/u)
+  const text = renderLastRequest(view)
+  assert.match(text, /费用来源：文本估算/u)
+
+  state = applyBillingEvent(state, {
+    type: 'assistant/attempt',
+    data: {
+      turn: 1,
+      step: 1,
+      usage: { inputTokens: 1000, outputTokens: 10 },
+      message: {
+        id: 'assistant-official',
+        source: { provider: 'deepseek', model: 'deepseek-v4.1-flash' },
+        content: [{ type: 'text', text: 'official usage arrived later' }],
+      },
+    },
+    time: 3,
+  }, env)
+  const upgraded = billingView(state, env)
+  assert.equal(upgraded.lastRequest.costSource, 'usage')
+  assert.equal(upgraded.lastRequest.status, 'priced')
+  assert.equal(upgraded.lastRequest.billedMicros, 1040)
+  assert.equal(upgraded.turnRequestCount, 1)
+  assert.equal(upgraded.costSourceStats.usage.requestCount, 1)
+  assert.equal(upgraded.costSourceStats.estimate.requestCount, 0)
+})
+
+test('request-level bill detail overrides usage evidence', () => {
+  const billDetails = new Map([[
+    's-bill:1:1',
+    {
+      schema: 'dsh.billing.bill.v1',
+      sourceRow: 7,
+      requestId: 'req-7',
+      requestKey: 's-bill:1:1',
+      amountMicros: 123_456,
+      inputTokens: 1000,
+      cacheReadTokens: 200,
+      cacheWriteTokens: 0,
+      outputTokens: 50,
+    },
+  ]])
+  const billEnv = { ...env, billDetails }
+  let state = initBillingState({ id: 's-bill' })
+  state = applyBillingEvent(state, { type: 'turn/start', data: { turn: 1 }, time: 1 }, billEnv)
+  const usageEvent = {
+    type: 'assistant/message',
+    data: {
+      turn: 1,
+      step: 1,
+      usage: { inputTokens: 999_999, outputTokens: 999_999 },
+      message: {
+        id: 'assistant-bill',
+        source: { provider: 'deepseek', model: 'deepseek-v4.1-flash' },
+        content: [{ type: 'text', text: 'done' }],
+      },
+    },
+    time: 2,
+  }
+  state = applyBillingEvent(state, usageEvent, billEnv)
+  state = applyBillingEvent(state, usageEvent, billEnv)
+  const view = billingView(state, billEnv)
+  assert.equal(view.lastRequest.costSource, 'bill')
+  assert.equal(view.lastRequest.billedMicros, 123_456)
+  assert.equal(view.lastRequest.billDetail.sourceRow, 7)
+  assert.equal(view.turnRequestCount, 1)
+  assert.equal(view.costSourceStats.bill.requestCount, 1)
+  assert.equal(view.costSourceStats.usage.requestCount, 0)
+  assert.equal(view.turnCosts['1'].mainComponentTotals.bill.billedMicros, 123_456)
+  const text = renderLastRequest(view)
+  assert.match(text, /费用来源：账单明细/u)
 })
 
 test('duplicate partial pricing replaces the prior request without count drift', () => {

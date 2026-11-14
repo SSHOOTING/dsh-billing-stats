@@ -2,8 +2,8 @@
 
 > **订阅账号也适用的 DSH 等价 API 计费统计。**
 >
-> 不调用 LLM，不修改请求，不猜 token。把你已经产生的 usage 换算成看得懂的钱：
-> 每次请求花多少、每一轮花多少、整个会话累计多少。
+> 不调用 LLM，不修改请求。优先用官方 usage 或请求级账单明细计价；两者都没有时，
+> 才按可见文本做透明的兜底估算，并始终标注费用来源。
 
 `dsh-billing-stats` 是 DSH 的只读计费统计插件。它适合想知道“这顿操作值多少钱”的人，
 也适合用订阅或中转方式间接调用模型、但看不到逐次 API 账单的人。
@@ -52,10 +52,12 @@
 
 ```mermaid
 flowchart LR
-  A[DSH 已产生的 usage<br/>provider / model / token] --> B[价格档案]
-  C[供应商账单<br/>CSV / JSON / JSONL] --> D[账户倍率与分桶拟合]
+  A[请求级账单明细<br/>最高优先级] --> V[费用证据选择]
+  B[官方 usage<br/>provider / model / token] --> V
+  C[兜底文本估算<br/>可见字符 + 工具定义] --> V
+  V --> D[价格档案]
   E[搜索 shim 账本<br/>可选] --> F[搜索固定费关联]
-  B --> G[逐请求费用]
+  A --> G[逐请求费用]
   D --> G
   F --> G
   G --> H[本轮 / 会话累计]
@@ -69,6 +71,8 @@ flowchart LR
 - 不修改 `maxTokens`；
 - 不阻断请求或工具调用；
 - 不调用 LLM，不需要联网；
+- 费用来源固定按 `账单明细 > 官方用量 > 文本估算 > 未知` 选择；
+- 文本估算不会伪装成官方 token 用量；
 - 不把未知 token 按 0 元计算。
 
 ## 核心能力
@@ -127,6 +131,7 @@ dsh plugin --profile web add link:E:/programs/dsh-billing-attribution
     displayCurrency: CNY
     ledgerPath: '<可写数据目录>/usage-ledger.jsonl'
     searchStatePath: '<可写数据目录>/search-state.json'
+    billDetailPath: '<请求级账单明细 JSONL>'
     searchLedgerEnabled: true
     searchLedgerPath: '<搜索 shim 的 JSONL 路径>'
     activeProfile: auto
@@ -135,6 +140,8 @@ dsh plugin --profile web add link:E:/programs/dsh-billing-attribution
 
 `ledgerPath` 和 `searchStatePath` 应该放在用户可写、可备份的目录，不要依赖升级时会被
 替换的包目录。搜索账本不存在时插件只跳过搜索关联，不影响模型计费。
+`billDetailPath` 在 Host 启动时载入；导入或替换请求级账单明细后，需要重启 DSH Web
+进程才会重新读取。
 
 ## 命令
 
@@ -154,8 +161,8 @@ dsh plugin --profile web add link:E:/programs/dsh-billing-attribution
 
 | 项目 | 结果 |
 |---|---|
-| `npm test` | 21 / 21 通过 |
-| `npm run check` | 17 个 JS/MJS 文件通过 |
+| `npm test` | 24 / 24 通过 |
+| `npm run check` | 18 个 JS/MJS 文件通过 |
 | `/cost` | 成功显示账单口径、公开价、请求数和最近请求 |
 | `/cost explain` | 成功显示 token、单价、峰时倍率和金额 |
 | `/cost profiles` | 成功列出两套档案 |
@@ -172,6 +179,8 @@ dsh plugin --profile web add link:E:/programs/dsh-billing-attribution
 - 固定汇率为 `1 USD = 7.2 CNY`，换汇率后历史结果不会自动回写。
 - 峰时窗口按北京时间工作日配置，不内置法定节假日日历。
 - 搜索关联是 best-effort；缺少精确 request id 时存在错配可能。
+- 官方 usage 缺失时会按可见文本和工具定义折算 token；该金额会标注为“文本估算”，
+  不等于供应商最终账单。
 - 负金额、退款、赠送额度和跨账单冲销不在 v0.1.0 范围内。
 - 不计算自部署 GPU、电力和运维成本。
 

@@ -8,6 +8,21 @@ import {
   priceUsage,
   subtractBuckets,
 } from './pricing.js'
+import {
+  COST_SOURCE_PRIORITY,
+  addCostSourceStats,
+  addTextEvidence,
+  contextEvidenceFromEvent,
+  costSourceLabel,
+  emptyCostSourceStats,
+  emptyTextEvidence,
+  estimateUsageForRequest,
+  headerEvidenceFromEvent,
+  mergeCostSourceStats,
+  messageIdFromEvent,
+  subtractCostSourceStats,
+  summarizeCostSources,
+} from './evidence.js'
 
 export const BILLING_STATE_VERSION = 2
 export const BILLING_PROJECTION_KEY = 'billing'
@@ -19,6 +34,7 @@ const EMPTY_COMPONENT_TOTALS = Object.freeze({
   output: Object.freeze({ listMicros: 0, billedMicros: 0 }),
   searchFee: Object.freeze({ listMicros: 0, billedMicros: 0 }),
   search: Object.freeze({ listMicros: 0, billedMicros: 0 }),
+  bill: Object.freeze({ listMicros: 0, billedMicros: 0 }),
   unknown: Object.freeze({ listMicros: 0, billedMicros: 0 }),
 })
 
@@ -35,6 +51,9 @@ export function initBillingState(header = {}) {
     turnPhase: 'idle',
     inFlight: false,
     turnStartedAt: null,
+    modelText: emptyTextEvidence(),
+    requestHeaderText: emptyTextEvidence(),
+    countedMessageIds: [],
     listSpentMicros: 0,
     billedSpentMicros: 0,
     unknownBuckets: { ...ZERO_BUCKETS },
@@ -52,9 +71,12 @@ export function initBillingState(header = {}) {
     turnComponentTotals: cloneComponentTotals(EMPTY_COMPONENT_TOTALS),
     turnBuckets: { ...ZERO_BUCKETS },
     turnRoutes: [],
+    turnCostSourceStats: emptyCostSourceStats(),
     turnRequestCount: 0,
     turnPricedRequestCount: 0,
     turnUnpricedRequestCount: 0,
+    costSourceStats: emptyCostSourceStats(),
+    turnCostSourceStats: emptyCostSourceStats(),
     lastRequest: null,
     lastTurn: null,
     turns: {},
@@ -102,9 +124,13 @@ export function applyBillingEvent(state, event, env) {
     case 'turn/start':
       return startTurn(state, event)
     case 'request/header':
-      return updateRoute(state, routeFromHeader(event))
+      return updateRequestHeader(state, event)
     case 'request/context':
       return state.route === null ? updateRoute(state, routeFromContext(event)) : state
+    case 'system/message':
+    case 'user/message':
+    case 'tool/message':
+      return addContextMessage(state, event)
     case 'step/start': {
       const turn = numberOrNull(event.data?.turn)
       const step = numberOrNull(event.data?.step)
@@ -183,6 +209,9 @@ export function billingView(state, env, searchNow = null, searchLast = null, sea
     || (searchNow?.unknownSettlements ?? 0) > 0
   const route = state.route
   const turnCosts = buildTurnCosts(state, searchTurns)
+  const turnUnknown = turn === null
+    ? false
+    : turnCosts[String(turn)]?.unknown === true
   let profileId = null
   let profile = null
   try {
@@ -208,6 +237,11 @@ export function billingView(state, env, searchNow = null, searchLast = null, sea
     billedSpentMicros,
     turnListMicros,
     turnBilledMicros,
+    turnUnknown,
+    costSourceStats: state.costSourceStats ?? emptyCostSourceStats(),
+    turnCostSourceStats: turnCosts[String(turn)]?.costSourceStats
+      ?? state.turnCostSourceStats
+      ?? emptyCostSourceStats(),
     turnRequestCount: state.turnRequestCount + (currentSearch?.settledRequestCount ?? 0),
     requestCount: state.requestCount + (searchNow?.settledRequestCount ?? 0),
     pricedRequestCount: state.pricedRequestCount,
@@ -233,9 +267,13 @@ export function billingView(state, env, searchNow = null, searchLast = null, sea
 export function renderBillingSummary(view, catalog) {
   const lines = [
     `计费统计 · ${view.phase === 'active' ? '本轮进行中' : view.phase === 'ended' ? '上一轮已结束' : '等待请求'}`,
-    `${view.turnPhase === 'ended' ? '上一轮' : '本轮'}：账单口径 ${formatMoney(view.turnBilledMicros, view.currency)}；公开价 ${formatMoney(view.turnListMicros, view.currency)}；请求 ${view.turnRequestCount} 次`,
-    `会话累计：账单口径 ${formatMoney(view.billedSpentMicros, view.currency)}；公开价 ${formatMoney(view.listSpentMicros, view.currency)}`,
+    `${view.turnPhase === 'ended' ? '上一轮' : '本轮'}：账单口径 ${formatCost(view.turnBilledMicros, view.turnUnknown, view.currency)}；公开价 ${formatCost(view.turnListMicros, view.turnUnknown, view.currency)}；请求 ${view.turnRequestCount} 次`,
+    `会话累计：账单口径 ${formatCost(view.billedSpentMicros, view.unknown, view.currency)}；公开价 ${formatCost(view.listSpentMicros, view.unknown, view.currency)}`,
   ]
+  const turnSources = formatSourceSummary(view.turnCostSourceStats, view.currency)
+  if (turnSources !== '') lines.push(`本轮费用来源：${turnSources}`)
+  const sessionSources = formatSourceSummary(view.costSourceStats, view.currency)
+  if (sessionSources !== '') lines.push(`会话费用来源：${sessionSources}`)
   if (view.route !== null) {
     lines.push(
       `当前路由：${view.route.provider}/${view.route.model}；价格档案：${view.profileLabel ?? view.profileId ?? '未知'}`,
@@ -247,10 +285,11 @@ export function renderBillingSummary(view, catalog) {
   const parts = formatComponents(view.turnComponentTotals, view.currency)
   if (parts.length > 0) lines.push(`本轮分项：${parts.join('；')}`)
   if (view.lastRequest !== null) {
+    const lastUnknown = isUnknownRequest(view.lastRequest)
     lines.push(
       `最近一次：${view.lastRequest.provider}/${view.lastRequest.model}，`
-      + `账单口径 ${formatMoney(view.lastRequest.billedMicros, view.currency)}，`
-      + `公开价 ${formatMoney(view.lastRequest.listMicros, view.currency)}`,
+      + `账单口径 ${formatCost(view.lastRequest.billedMicros, lastUnknown, view.currency)}，`
+      + `公开价 ${formatCost(view.lastRequest.listMicros, lastUnknown, view.currency)}`,
     )
   }
   if (view.unknown) {
@@ -267,11 +306,17 @@ export function renderBillingSummary(view, catalog) {
 export function renderLastRequest(view) {
   if (view.lastRequest === null) return '还没有可解释的请求记录。'
   const request = view.lastRequest
+  const unknown = isUnknownRequest(request)
+  const usageUnknown = request.unknownComponents.includes('usage')
+    || request.costSource === 'unknown'
   const lines = [
     `最近一次请求：${request.provider}/${request.model}`,
     `请求类型：${request.requestKind}；状态：${request.status}；时间：${request.at ?? '未知'}`,
-    `账单口径：${formatMoney(request.billedMicros, view.currency)}；公开价：${formatMoney(request.listMicros, view.currency)}`,
-    `tokens：未缓存输入 ${request.buckets.uncachedInputTokens}；缓存读取 ${request.buckets.cacheReadTokens}；缓存写入 ${request.buckets.cacheWriteTokens}；输出 ${request.buckets.outputTokens}`,
+    `费用来源：${sourceDescription(request.costSource)}`,
+    `账单口径：${formatCost(request.billedMicros, unknown, view.currency)}；公开价：${formatCost(request.listMicros, unknown, view.currency)}`,
+    usageUnknown
+      ? 'tokens：未知（提供商未返回 usage；主动中止或断流时可能发生）'
+      : `tokens：未缓存输入 ${request.buckets.uncachedInputTokens}；缓存读取 ${request.buckets.cacheReadTokens}；缓存写入 ${request.buckets.cacheWriteTokens}；输出 ${request.buckets.outputTokens}`,
   ]
   for (const component of request.components) {
     if (component.kind === 'fixed-search-fee') {
@@ -287,7 +332,7 @@ export function renderLastRequest(view) {
     }
   }
   if (request.unknownComponents.length > 0) {
-    lines.push(`未知分项：${request.unknownComponents.join('; ')}`)
+    lines.push(`未知分项：${request.unknownComponents.map(unknownComponentLabel).join('; ')}`)
   }
   return lines.join('\n')
 }
@@ -369,6 +414,7 @@ function endTurn(state, event) {
     componentTotals: state.turnComponentTotals,
     buckets: state.turnBuckets,
     routes: state.turnRoutes,
+    costSourceStats: state.turnCostSourceStats ?? emptyCostSourceStats(),
     unknown: state.turnUnpricedRequestCount > 0
       || hasAnyBuckets(state.turnUnknownBuckets)
       || state.turnUnknownComponents.length > 0,
@@ -388,58 +434,165 @@ function endTurn(state, event) {
   }
 }
 
+function buildRequest({
+  state,
+  event,
+  env,
+  requestKey,
+  turn,
+  step,
+  officialUsage,
+  estimated,
+  billDetail,
+}) {
+  const route = routeFromMessage(event) ?? state.route
+  const provider = route?.provider ?? 'unknown'
+  const model = route?.model ?? 'unknown'
+  const base = {
+    requestKey,
+    sessionId: state.sessionId,
+    turn,
+    step,
+    provider,
+    model,
+    requestKind: 'model',
+    at: event.time,
+  }
+  if (billDetail !== null) {
+    const priced = priceRequest(env, {
+      state,
+      event,
+      provider,
+      model,
+      usage: officialUsage ?? estimated.usage,
+    })
+    const billBuckets = bucketsFromBill(billDetail) ?? estimated.usage
+    return {
+      ...base,
+      ...withoutProfile(priced),
+      status: 'priced',
+      costSource: 'bill',
+      buckets: billBuckets,
+      components: [{
+        kind: 'bill-total',
+        category: 'bill',
+        listMicros: priced.listMicros,
+        billedMicros: billDetail.amountMicros,
+      }],
+      unknownComponents: [],
+      listMicros: priced.listMicros,
+      billedMicros: billDetail.amountMicros,
+      billDetail: {
+        sourceRow: billDetail.sourceRow ?? null,
+        requestId: billDetail.requestId ?? null,
+        requestKey: billDetail.requestKey ?? requestKey,
+      },
+      estimate: officialUsage === undefined ? estimated.evidence : null,
+    }
+  }
+  if (officialUsage !== undefined) {
+    const priced = priceRequest(env, {
+      state,
+      event,
+      provider,
+      model,
+      usage: officialUsage,
+    })
+    return {
+      ...base,
+      ...withoutProfile(priced),
+      costSource: priced.status === 'unknown' ? 'unknown' : 'usage',
+      estimate: null,
+    }
+  }
+  const priced = priceRequest(env, {
+    state,
+    event,
+    provider,
+    model,
+    usage: estimated.usage,
+  })
+  const estimatedEmpty = estimated.usage.uncachedInputTokens === 0
+    && estimated.usage.outputTokens === 0
+  return {
+    ...base,
+    ...withoutProfile(priced),
+    costSource: priced.status === 'unknown' || estimatedEmpty ? 'unknown' : 'estimate',
+    status: priced.status === 'unknown' || estimatedEmpty
+      ? 'unknown'
+      : priced.status === 'priced'
+        ? 'estimated'
+        : priced.status,
+    unknownComponents: priced.status === 'unknown' || estimatedEmpty
+      ? appendUnique(priced.unknownComponents, ['estimate'])
+      : priced.unknownComponents,
+    estimate: estimated.evidence,
+  }
+}
+
+function priceRequest(env, { state, event, provider, model, usage }) {
+  return priceUsage(env.pricing, {
+    provider,
+    model,
+    usage,
+    profile: state.activeProfileOverride,
+    at: event.time,
+    requestKind: 'model',
+  })
+}
+
+function withoutProfile(priced) {
+  const { profile, ...fields } = priced
+  return fields
+}
+
+function bucketsFromBill(record) {
+  const buckets = {
+    uncachedInputTokens: record?.inputTokens ?? 0,
+    cacheReadTokens: record?.cacheReadTokens ?? 0,
+    cacheWriteTokens: record?.cacheWriteTokens ?? 0,
+    outputTokens: record?.outputTokens ?? 0,
+  }
+  return hasAnyBuckets(buckets) ? buckets : null
+}
+
+function resolveBillDetail(env, sessionId, turn, step) {
+  if (!(env?.billDetails instanceof Map)) return null
+  return env.billDetails.get(`${sessionId}:${turn}:${step}`) ?? null
+}
+
+function sourcePriority(source) {
+  return COST_SOURCE_PRIORITY[source] ?? COST_SOURCE_PRIORITY.unknown
+}
+
 function applyUsageEvent(state, event, env) {
   const turn = numberOrNull(event.data?.turn)
   const step = numberOrNull(event.data?.step)
   if (turn === null || step === null) return state
   const requestKey = `${turn}:${step}`
   const previous = state.recentRequests.find(item => item.requestKey === requestKey) ?? null
+  const officialUsage = usageFromEvent(event)
+  const estimated = estimateUsageForRequest(state, event)
+  const billDetail = resolveBillDetail(env, state.sessionId, turn, step)
+  const request = buildRequest({
+    state,
+    event,
+    env,
+    requestKey,
+    turn,
+    step,
+    officialUsage,
+    estimated,
+    billDetail,
+  })
+  if (previous !== null
+    && sourcePriority(previous.costSource) > sourcePriority(request.costSource)) {
+    return addContextMessage(state, event)
+  }
   let next = previous === null ? state : removeRequest(state, previous)
-  const sample = usageFromEvent(event)
   const route = routeFromMessage(event) ?? next.route
   const provider = route?.provider ?? 'unknown'
   const model = route?.model ?? 'unknown'
-  let request
-  if (sample === undefined) {
-    request = {
-      requestKey,
-      sessionId: state.sessionId,
-      turn,
-      step,
-      provider,
-      model,
-      requestKind: 'model',
-      at: event.time,
-      profileId: null,
-      profileLabel: null,
-      billingBasis: null,
-      status: 'unknown',
-      buckets: { ...ZERO_BUCKETS },
-      components: [],
-      unknownComponents: ['usage'],
-      listMicros: 0,
-      billedMicros: 0,
-      accountMultiplier: null,
-      pricingVerified: false,
-    }
-  } else {
-    request = {
-      requestKey,
-      sessionId: state.sessionId,
-      turn,
-      step,
-      provider,
-      model,
-      ...priceUsage(env.pricing, {
-        provider,
-        model,
-        usage: sample,
-        profile: state.activeProfileOverride,
-        at: event.time,
-        requestKind: 'model',
-      }),
-    }
-  }
   const unknown = isUnknownRequest(request)
   const routeKey = provider === 'unknown' || model === 'unknown'
     ? null
@@ -474,7 +627,14 @@ function applyUsageEvent(state, event, env) {
     turnRequestCount: next.turnRequestCount + 1,
     turnPricedRequestCount: next.turnPricedRequestCount + (unknown ? 0 : 1),
     turnUnpricedRequestCount: next.turnUnpricedRequestCount + (unknown ? 1 : 0),
+    costSourceStats: addCostSourceStats(next.costSourceStats, request.costSource, request),
+    turnCostSourceStats: addCostSourceStats(
+      next.turnCostSourceStats,
+      request.costSource,
+      request,
+    ),
   }
+  return addContextMessage(withRequest, event)
 }
 
 function removeRequest(state, request) {
@@ -497,6 +657,16 @@ function removeRequest(state, request) {
     turnRequestCount: Math.max(0, state.turnRequestCount - 1),
     turnPricedRequestCount: Math.max(0, state.turnPricedRequestCount - (unknown ? 0 : 1)),
     turnUnpricedRequestCount: Math.max(0, state.turnUnpricedRequestCount - (unknown ? 1 : 0)),
+    costSourceStats: subtractCostSourceStats(
+      state.costSourceStats,
+      request.costSource,
+      request,
+    ),
+    turnCostSourceStats: subtractCostSourceStats(
+      state.turnCostSourceStats,
+      request.costSource,
+      request,
+    ),
   }
 }
 
@@ -536,6 +706,7 @@ function removeComponents(target, components) {
 
 function componentKey(component) {
   if (component.kind === 'fixed-search-fee') return 'searchFee'
+  if (component.kind === 'bill-total') return 'bill'
   if (component.category === 'search-token') return bucketKey(component.bucket)
   if (component.category === 'search') return 'search'
   return bucketKey(component.bucket)
@@ -589,6 +760,8 @@ function buildTurnCosts(state, searchTurns) {
       componentTotals: state.turnComponentTotals,
       buckets: state.turnBuckets,
       routes: state.turnRoutes,
+      unknownComponents: state.turnUnknownComponents,
+      costSourceStats: state.turnCostSourceStats ?? emptyCostSourceStats(),
       unknown: state.turnUnpricedRequestCount > 0
         || hasAnyBuckets(state.turnUnknownBuckets)
         || state.turnUnknownComponents.length > 0,
@@ -618,8 +791,39 @@ function mergeTurnCost(base, search) {
     componentTotals: mergeComponentTotals(mainComponentTotals, searchComponentTotals),
     buckets: { ...ZERO_BUCKETS, ...(base.buckets ?? {}) },
     routes: Array.isArray(base.routes) ? base.routes : [],
+    unknownComponents: Array.isArray(base.unknownComponents) ? base.unknownComponents : [],
+    costSourceStats: mergeCostSourceStats(
+      base.costSourceStats,
+      search?.costSourceStats,
+    ),
     unknown: base.unknown === true || (search?.unknownSettlements ?? 0) > 0,
   }
+}
+
+function formatCost(micros, unknown, currency) {
+  if (unknown !== true) return formatMoney(micros, currency)
+  return micros > 0 ? formatMoney(micros, currency) : '未知'
+}
+
+function unknownComponentLabel(value) {
+  if (value === 'usage') return 'token 用量（usage）'
+  if (value === 'estimate') return '可用于文本估算的内容'
+  return value
+}
+
+function formatSourceSummary(stats, currency) {
+  return summarizeCostSources(stats)
+    .map(item => item.source === 'unknown'
+      ? `${item.label} ${item.requestCount} 次`
+      : `${item.label} ${formatMoney(item.billedMicros, currency)}`)
+    .join('；')
+}
+
+function sourceDescription(source) {
+  if (source === 'estimate') {
+    return '文本估算（按可见字符数折算 token，不是官方 token 用量）'
+  }
+  return costSourceLabel(source)
 }
 
 function aggregateSearchComponentTotals(summary) {
@@ -650,6 +854,7 @@ function componentLabel(key) {
     outputTokens: '输出（含 reasoning）',
     searchFee: '搜索固定费',
     search: '搜索',
+    bill: '账单合计',
     unknown: '未知',
   }[key] ?? key
 }
@@ -675,6 +880,37 @@ function updateRoute(state, route) {
     return state
   }
   return { ...state, route }
+}
+
+function updateRequestHeader(state, event) {
+  const route = routeFromHeader(event)
+  const next = route === null ? state : updateRoute(state, route)
+  return {
+    ...next,
+    requestHeaderText: headerEvidenceFromEvent(event),
+  }
+}
+
+function addContextMessage(state, event) {
+  const messageId = messageIdFromEvent(event)
+  const countedMessageIds = state.countedMessageIds ?? []
+  if (messageId !== null && countedMessageIds.includes(messageId)) return state
+  const evidence = contextEvidenceFromEvent(event)
+  if (evidence.cjkChars === 0 && evidence.otherChars === 0) {
+    return messageId === null
+      ? state
+      : {
+          ...state,
+          countedMessageIds: [...countedMessageIds, messageId].slice(-512),
+        }
+  }
+  return {
+    ...state,
+    modelText: addTextEvidence(state.modelText, evidence),
+    countedMessageIds: messageId === null
+      ? countedMessageIds
+      : [...countedMessageIds, messageId].slice(-512),
+  }
 }
 
 function routeFromHeader(event) {
