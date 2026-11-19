@@ -1,6 +1,6 @@
 {
   "name": "dsh-billing-stats",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "type": "module",
   "description": "Minimal, read-only DSH token billing statistics with per-turn and session equivalent API cost.",
   "license": "MIT",
@@ -50,7 +50,9 @@
     "README.md",
     "CHANGELOG.md",
     "RELEASE-NOTES-v1.1.1.md",
-    "RELEASE-NOTES-v0.1.0.md"
+    "RELEASE-NOTES-v0.1.0.md",
+    "bin",
+    "scripts"
   ],
   "dsh": {
     "bundle": {

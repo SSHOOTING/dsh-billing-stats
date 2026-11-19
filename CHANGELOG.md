@@ -95,3 +95,10 @@
 - GitHub Release `v0.1.0` 已发布，并附 npm 同版本 tarball 与 SHA-256 校验文件：
   `https://github.com/SSHOOTING/dsh-billing-stats/releases/tag/v0.1.0`。
 - DSH 市场目录提交仍需等待仓库创建满 1 天后进行。
+
+## [1.1.2] - 2026-11-19
+
+### 修复
+
+- 把 `bin/` 与 `scripts/` 纳入发布包，修复 `bill:import`、`bill:fit`、`report` 三个声明命令在 npm 包中找不到目标文件的问题。
+- 增加 `package-lock.json`，让干净环境可以执行 `npm ci`。
