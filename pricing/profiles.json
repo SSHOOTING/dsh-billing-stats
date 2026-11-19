@@ -7,6 +7,7 @@
   "providerProfiles": {
     "deepseek": "deepseek-official",
     "deepseek-official": "deepseek-official",
+    "nju-deepseek": "nju-local",
     "opencode-go": "opencode-go",
     "opencode": "opencode-go",
     "openrouter": "opencode-go",
@@ -71,6 +72,40 @@
         }
       }
     },
+    "nju-local": {
+      "label": "NJU DeepSeek V4.1 Flash (public7 local)",
+      "currency": "CNY",
+      "billingBasis": "self-hosted",
+      "accountMultiplier": 0,
+      "accountMultiplierSource": "NJU public7 local service; no API charge, official DeepSeek list price used only for equivalent-cost accounting",
+      "searchMultiplier": 0,
+      "source": "DeepSeek official list price used as equivalent cost; actual delivered API charge is zero",
+      "verified": true,
+      "models": {
+        "deepseek-flash": {
+          "aliases": [
+            "deepseek-v4-flash",
+            "deepseek-v4.1-flash",
+            "deepseek-v4-1-flash",
+            "deepseek-chat",
+            "deepseek-reasoner",
+            "deepseek/deepseek-v4-flash",
+            "deepseek/deepseek-v4.1-flash"
+          ],
+          "input": 1.0,
+          "cacheRead": 0.02,
+          "cacheWrite": 1.0,
+          "output": 4.0,
+          "peakMultiplier": 2,
+          "peakTimeZone": "Asia/Shanghai",
+          "peakWindows": [
+            ["09:00", "12:00"],
+            ["14:00", "18:00"]
+          ],
+          "verified": true
+        }
+      }
+    },
     "opencode-go": {
       "label": "OpenCode Go",
       "currency": "USD",
@@ -102,6 +137,25 @@
             ["14:00", "18:00"]
           ],
           "verified": true
+        },
+        "hy4-flash-free": {
+          "aliases": [
+            "hy4-flash-free",
+            "hy4-flash",
+            "hy4-preview",
+            "tencent/hy4-preview",
+            "tencent/hy4-flash",
+            "Tencent: Hy4 Flash",
+            "Hy4 Flash Free",
+            "Hunyuan Hy4 Flash"
+          ],
+          "input": 0.834,
+          "cacheRead": 0.042,
+          "cacheWrite": 0,
+          "output": 2.501,
+          "accountMultiplier": 0,
+          "verified": false,
+          "source": "Official Hy4 preview equivalent list price from pi-ai opencode-go catalog; free promo delivered cost may be zero"
         },
         "claude-haiku-5-5": {
           "aliases": [

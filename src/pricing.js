@@ -58,6 +58,9 @@ export function createPricingCatalog(document) {
         peakMultiplier: optionalPositive(rawModel.peakMultiplier ?? rawProfile.peakMultiplier),
         peakTimeZone: String(rawModel.peakTimeZone ?? rawProfile.peakTimeZone ?? 'Asia/Shanghai'),
         peakWindows: normalizePeakWindows(rawModel.peakWindows ?? rawProfile.peakWindows),
+        accountMultiplier: rawModel.accountMultiplier === undefined
+          ? undefined
+          : optionalRate(rawModel.accountMultiplier),
         verified: rawModel.verified === true,
         source: typeof rawModel.source === 'string' ? rawModel.source : null,
         fit: isPlainObject(rawModel.fit) ? structuredClone(rawModel.fit) : null,
@@ -90,13 +93,13 @@ export function createPricingCatalog(document) {
       label: String(rawProfile.label ?? profileId),
       currency: normalizeCurrency(rawProfile.currency ?? displayCurrency),
       billingBasis: String(rawProfile.billingBasis ?? 'list-price'),
-      accountMultiplier: finitePositive(rawProfile.accountMultiplier ?? 1)
-        ?? throwType(`profile ${profileId}.accountMultiplier must be positive`),
+      accountMultiplier: optionalRate(rawProfile.accountMultiplier ?? 1)
+        ?? throwType(`profile ${profileId}.accountMultiplier must be non-negative`),
       accountMultiplierSource: typeof rawProfile.accountMultiplierSource === 'string'
         ? rawProfile.accountMultiplierSource
         : null,
-      searchMultiplier: finitePositive(rawProfile.searchMultiplier ?? 1)
-        ?? throwType(`profile ${profileId}.searchMultiplier must be positive`),
+      searchMultiplier: optionalRate(rawProfile.searchMultiplier ?? 1)
+        ?? throwType(`profile ${profileId}.searchMultiplier must be non-negative`),
       source: typeof rawProfile.source === 'string' ? rawProfile.source : null,
       verified: rawProfile.verified === true,
       fit: isPlainObject(rawProfile.fit) ? structuredClone(rawProfile.fit) : null,
@@ -214,6 +217,7 @@ export function priceUsage(catalog, {
   const peak = peakState(at ?? Date.now(), resolved.model)
   const components = []
   const unknownComponents = []
+  const accountMultiplier = resolved.model?.accountMultiplier ?? resolved.profile.accountMultiplier
 
   if (resolved.model === undefined) {
     for (const [bucket, tokens] of Object.entries(buckets)) {
@@ -261,7 +265,7 @@ export function priceUsage(catalog, {
       rateCurrency: resolved.profile.currency,
       peakMultiplier: peak.multiplier,
       listMicros,
-      billedMicros: Math.round(listMicros * resolved.profile.accountMultiplier),
+      billedMicros: Math.round(listMicros * accountMultiplier),
     })
   }
 
@@ -476,6 +480,7 @@ function result({
 }) {
   const listMicros = components.reduce((sum, component) => sum + component.listMicros, 0)
   const billedMicros = components.reduce((sum, component) => sum + component.billedMicros, 0)
+  const accountMultiplier = resolved.model?.accountMultiplier ?? resolved.profile.accountMultiplier
   return {
     profileId: resolved.profileId,
     profileLabel: resolved.profile.label,
@@ -492,7 +497,7 @@ function result({
     listMicros,
     billedMicros,
     status: unknownComponents.length === 0 ? 'priced' : listMicros > 0 ? 'partial' : 'unknown',
-    accountMultiplier: resolved.profile.accountMultiplier,
+    accountMultiplier,
     pricingVerified: resolved.profile.verified && (resolved.model?.verified ?? false),
     profile,
   }

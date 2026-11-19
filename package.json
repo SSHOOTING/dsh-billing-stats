@@ -1,8 +1,8 @@
 {
   "name": "dsh-billing-stats",
-  "version": "0.1.0",
+  "version": "1.1.1",
   "type": "module",
-  "description": "Read-only DSH token billing statistics with equivalent API cost, bill calibration, and explainable per-request reporting.",
+  "description": "Minimal, read-only DSH token billing statistics with per-turn and session equivalent API cost.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -43,10 +43,13 @@
     "docs/BILL-FITTING.md",
     "docs/BILLING-MODEL.md",
     "docs/billing-explainer.html",
+    "docs/images/readme-turn-cost.png",
+    "docs/images/readme-session-cost.png",
     "cordis.patch.yml",
     "LICENSE",
     "README.md",
     "CHANGELOG.md",
+    "RELEASE-NOTES-v1.1.1.md",
     "RELEASE-NOTES-v0.1.0.md"
   ],
   "dsh": {

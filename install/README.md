@@ -15,7 +15,7 @@
 ## 方式一：npm 包（仅发布后）
 
 ```powershell
-dsh plugin --profile web add dsh-billing-stats@0.1.0
+dsh plugin --profile web add dsh-billing-stats@1.1.1
 ```
 
 该命令要求 npm 包已发布、profile 的包管理器可以解析该名称，并且 DSH 进程使用同一个
@@ -24,7 +24,7 @@ dsh plugin --profile web add dsh-billing-stats@0.1.0
 ## 方式二：tarball（GitHub Release 或本地产物）
 
 ```powershell
-dsh plugin --profile web add E:\path\to\dsh-billing-stats-0.1.0.tgz
+dsh plugin --profile web add E:\path\to\dsh-billing-stats-1.1.1.tgz
 ```
 
 DSH 的 `plugin` 子命令会把 `add ...` 转发给 profile 目录中的 pnpm。发布包不包含

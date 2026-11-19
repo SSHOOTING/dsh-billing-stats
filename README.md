@@ -1,15 +1,36 @@
 # dsh-billing-stats
 
-> **订阅账号也适用的 DSH 等价 API 计费统计。**
+> **极简的 DSH 等价 API 计费统计。**
 >
-> 不调用 LLM，不修改请求。优先用官方 usage 或请求级账单明细计价；两者都没有时，
-> 才按可见文本做透明的兜底估算，并始终标注费用来源。
+> 不新增 dashboard，只把两个最该看的数字放回 DSH 原生界面：**每轮结束后这一轮花了多少，
+> 以及会话底部整个 session 一共花了多少。** 不调用 LLM，不修改请求，不打断工作流。
 
-`dsh-billing-stats` 是 DSH 的只读计费统计插件。它适合想知道“这顿操作值多少钱”的人，
-也适合用订阅或中转方式间接调用模型、但看不到逐次 API 账单的人。
+`dsh-billing-stats` 是一个**极简、只读**的 DSH 计费统计插件。它适合想知道
+“这顿操作值多少钱”的人，也适合用订阅或中转方式间接调用模型、但看不到逐次 API
+账单的人。优先用官方 usage 或请求级账单明细计价；两者都没有时，才按可见文本做透明
+的兜底估算，并始终标注费用来源。
 
 当前内置价格档案仅覆盖 **DeepSeek 系列模型**，并已在 DSH `0.2.0-rc.2` 的 web profile
 中完成真实功能验收。
+
+## 极简，但够用
+
+插件没有另起炉灶做一套割裂的 cost dashboard，只增强你原本就会看的两个位置：
+
+| 位置 | 你会看到 | 回答的问题 |
+|---|---|---|
+| 每轮回答末尾 | 本轮金额、来源与时间 | 这一次操作值多少钱？ |
+| 会话输入框下方 | 整个会话累计金额，可展开费用拆分 | 这个 session 到现在一共花了多少？ |
+
+下面两张图都来自真实 DSH 会话，不是设计稿。
+
+### 每轮结束：这一轮花了多少？
+
+![每轮结束后显示本轮用量费用](docs/images/readme-turn-cost.png)
+
+### 会话底部：整个 session 一共花了多少？
+
+![会话底部的会话费用与费用拆分面板](docs/images/readme-session-cost.png)
 
 ## 先回答三个问题
 
@@ -99,13 +120,13 @@ flowchart LR
 ### npm
 
 ```powershell
-dsh plugin --profile web add dsh-billing-stats@0.1.0
+dsh plugin --profile web add dsh-billing-stats@1.1.1
 ```
 
 ### GitHub Release tarball
 
 ```powershell
-dsh plugin --profile web add https://github.com/SSHOOTING/dsh-billing-stats/releases/download/v0.1.0/dsh-billing-stats-0.1.0.tgz
+dsh plugin --profile web add https://github.com/SSHOOTING/dsh-billing-stats/releases/download/v1.1.1/dsh-billing-stats-1.1.1.tgz
 ```
 
 ### 本地开发链接
@@ -157,7 +178,8 @@ dsh plugin --profile web add link:E:/programs/dsh-billing-attribution
 
 ## 已验证
 
-2026-11-11 在 Windows、Node.js `v24.19.0`、DSH `0.2.0-rc.2` web profile 中实测：
+2026-11-17 完成 `1.1.1` 回归；两张 README 截图来自 2026-11-16 的真实 DSH web 会话。
+测试环境为 Windows、Node.js `v24.19.0`、DSH `0.2.0-rc.2` web profile：
 
 | 项目 | 结果 |
 |---|---|
@@ -168,6 +190,7 @@ dsh plugin --profile web add link:E:/programs/dsh-billing-attribution
 | `/cost profiles` | 成功列出两套档案 |
 | 档案切换 | 切换后新请求使用新档案，历史金额不变 |
 | 原生金额 UI | 会话胶囊、每轮金额和搜索行均已验证 |
+| README 截图 | 每轮费用、会话累计金额与展开明细均来自真实会话 |
 | 真实搜索关联 | ledger `settled`，搜索 1 次，固定费 `¥0.005` |
 | HTML 报告 | 样例包含 35 条 usage、3 条账单，生成成功 |
 
@@ -181,7 +204,7 @@ dsh plugin --profile web add link:E:/programs/dsh-billing-attribution
 - 搜索关联是 best-effort；缺少精确 request id 时存在错配可能。
 - 官方 usage 缺失时会按可见文本和工具定义折算 token；该金额会标注为“文本估算”，
   不等于供应商最终账单。
-- 负金额、退款、赠送额度和跨账单冲销不在 v0.1.0 范围内。
+- 负金额、退款、赠送额度和跨账单冲销不在当前版本范围内。
 - 不计算自部署 GPU、电力和运维成本。
 
 ## 开发与验证
